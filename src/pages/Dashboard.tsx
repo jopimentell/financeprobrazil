@@ -55,17 +55,17 @@ export default function Dashboard() {
           <button onClick={() => setAnnualView(!annualView)}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 transition-opacity">
             <BarChart3 className="h-4 w-4" />
-            {annualView ? 'Visão Mensal' : 'Visão Anual'}
+            <span className="hidden sm:inline">{annualView ? 'Visão Mensal' : 'Visão Anual'}</span>
           </button>
         </div>
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <FinanceMetricCard title={annualView ? 'Saldo Anual' : 'Saldo do Mês'} value={balance} icon={DollarSign} type={balance >= 0 ? 'info' : 'expense'} />
         <FinanceMetricCard title="Receitas" value={income} icon={TrendingUp} type="income" />
         <FinanceMetricCard title="Despesas" value={expense} icon={TrendingDown} type="expense" />
-        <FinanceMetricCard title="Restante" value={balance} icon={Wallet} type={balance >= 0 ? 'income' : 'expense'} />
+        <FinanceMetricCard title="Resultado" value={balance} icon={Wallet} type={balance >= 0 ? 'income' : 'expense'} />
       </div>
 
       {/* Charts */}

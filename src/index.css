@@ -2,48 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 @layer base {
   :root {
-    --background: 220 14% 96%;
-    --foreground: 222 47% 11%;
+    --background: 0 0% 98%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 217 91% 60%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary-foreground: 224 71% 4%;
     --muted: 220 14% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 220 14% 92%;
-    --accent-foreground: 222 47% 11%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 71% 4%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --ring: 221 83% 53%;
     --radius: 0.75rem;
 
     --finance-income: 142 71% 45%;
     --finance-expense: 0 84% 60%;
-    --finance-info: 217 91% 60%;
+    --finance-info: 221 83% 53%;
     --finance-warning: 45 93% 47%;
-    --finance-sidebar: 222 47% 11%;
-    --finance-sidebar-foreground: 210 40% 98%;
-    --finance-sidebar-hover: 217 33% 17%;
-    --finance-sidebar-active: 217 91% 60%;
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 224 71% 4%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 224 71% 4%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 221 83% 53%;
+    --sidebar-muted: 220 9% 46%;
   }
 }
 
@@ -53,13 +50,17 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 }
 
 @layer components {
   .finance-card {
-    @apply bg-card rounded-xl border border-border shadow-sm p-5 transition-shadow hover:shadow-md;
+    @apply bg-card rounded-xl border border-border p-5 transition-all;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  }
+  .finance-card:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
   }
   .finance-metric {
     @apply finance-card flex flex-col gap-2;
@@ -77,9 +78,20 @@
     color: hsl(var(--finance-warning));
   }
   .btn-income {
-    @apply bg-[hsl(142,71%,45%)] text-white hover:bg-[hsl(142,71%,40%)] transition-colors;
+    background-color: hsl(142 71% 45%);
+    @apply text-white transition-colors;
+  }
+  .btn-income:hover {
+    background-color: hsl(142 71% 40%);
   }
   .btn-expense {
-    @apply bg-[hsl(0,84%,60%)] text-white hover:bg-[hsl(0,84%,55%)] transition-colors;
+    background-color: hsl(0 84% 60%);
+    @apply text-white transition-colors;
+  }
+  .btn-expense:hover {
+    background-color: hsl(0 84% 55%);
+  }
+  .input-field {
+    @apply w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors;
   }
 }
