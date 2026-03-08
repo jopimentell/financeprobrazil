@@ -174,11 +174,8 @@ export function ImportStatementModal({ open, onClose }: Props) {
     if (!file) return;
     setFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      if (!text) return;
-
+    // Try UTF-8 first, then fallback to ISO-8859-1 (common for Brazilian bank files)
+    const tryParse = (text: string): boolean => {
       let parsed: ParsedRow[];
       const ext = file.name.toLowerCase();
 
@@ -194,14 +191,27 @@ export function ImportStatementModal({ open, onClose }: Props) {
         }
       }
 
-      if (parsed.length === 0) {
-        toast.error('Não foi possível interpretar o arquivo. Verifique o formato.');
-        return;
-      }
-
+      if (parsed.length === 0) return false;
       processRows(parsed);
+      return true;
     };
-    reader.readAsText(file);
+
+    const readerUtf8 = new FileReader();
+    readerUtf8.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (text && tryParse(text)) return;
+
+      // Fallback: try ISO-8859-1 encoding (Banco Inter, etc.)
+      const readerLatin = new FileReader();
+      readerLatin.onload = (ev2) => {
+        const textLatin = ev2.target?.result as string;
+        if (!textLatin || !tryParse(textLatin)) {
+          toast.error('Não foi possível interpretar o arquivo. Verifique o formato.');
+        }
+      };
+      readerLatin.readAsText(file, 'ISO-8859-1');
+    };
+    readerUtf8.readAsText(file, 'UTF-8');
     e.target.value = '';
   };
 
