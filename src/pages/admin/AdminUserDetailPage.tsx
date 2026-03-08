@@ -17,8 +17,13 @@ import { Button } from '@/components/ui/button';
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { users, user: currentUser, toggleUserStatus, deleteUser } = useAuth();
+  const { users, user: currentUser, toggleUserStatus, deleteUser, updateUserRole } = useAuth();
   const { getUserTransactions, getUserAccounts, getUserDebts, getUserInvestments, getCategoryName } = useFinance();
+  const { addLog } = useAdminLogs();
+  const { requestImpersonation, pendingTarget } = useImpersonation();
+
+  const [demoteOpen, setDemoteOpen] = useState(false);
+  const [demoteConfirmText, setDemoteConfirmText] = useState('');
   const { addLog } = useAdminLogs();
   const { requestImpersonation, pendingTarget } = useImpersonation();
 
