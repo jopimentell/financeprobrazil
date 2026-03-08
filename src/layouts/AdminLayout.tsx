@@ -18,7 +18,7 @@ const adminNav = [
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAdmin, logout, impersonating, stopImpersonation } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
