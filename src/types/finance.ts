@@ -88,6 +88,38 @@ export interface SystemSettings {
   maintenanceMode: boolean;
 }
 
+export interface CreditCard {
+  id: string;
+  userId: string;
+  name: string;
+  limit: number;
+  closingDay: number;
+  dueDay: number;
+  createdAt: string;
+}
+
+export interface CreditCardExpense {
+  id: string;
+  userId: string;
+  cardId: string;
+  description: string;
+  amount: number;
+  category: string;
+  purchaseDate: string;
+  installments?: number;
+  currentInstallment?: number;
+  totalInstallments?: number;
+  parentExpenseId?: string;
+}
+
+export interface CreditCardInvoice {
+  cardId: string;
+  month: string; // YYYY-MM
+  total: number;
+  status: 'open' | 'closed' | 'paid' | 'future';
+  expenses: CreditCardExpense[];
+}
+
 export interface FinanceState {
   transactions: Transaction[];
   categories: Category[];
@@ -95,4 +127,6 @@ export interface FinanceState {
   debts: Debt[];
   investments: Investment[];
   forecast: Forecast[];
+  creditCards: CreditCard[];
+  creditCardExpenses: CreditCardExpense[];
 }

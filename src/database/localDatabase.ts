@@ -5,7 +5,7 @@
  * replace these functions with API calls — no frontend changes needed.
  */
 
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense } from '@/types/finance';
 import { createDefaultCategories, createDefaultAccounts, createDefaultForecast } from '@/data/seedData';
 
 // ── Types ──────────────────────────────────────────────
