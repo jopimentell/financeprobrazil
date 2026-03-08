@@ -87,6 +87,35 @@ export default function Dashboard() {
 
   const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
+  // Future installment expenses (parcelas futuras)
+  const futureInstallments = useMemo(() => {
+    const now = new Date();
+    const currentMonthKey = now.getFullYear() * 12 + now.getMonth();
+    return allUserTx.filter(tx => {
+      if (tx.origin !== 'parcelamento') return false;
+      const txDate = new Date(tx.date);
+      const txMonthKey = txDate.getFullYear() * 12 + txDate.getMonth();
+      return txMonthKey > currentMonthKey;
+    });
+  }, [allUserTx]);
+
+  const futureInstallmentTotal = futureInstallments.reduce((s, t) => s + t.amount, 0);
+
+  // Group future installments by month for preview
+  const futureByMonth = useMemo(() => {
+    const grouped: Record<string, { label: string; total: number; items: typeof futureInstallments }> = {};
+    futureInstallments.forEach(tx => {
+      const d = new Date(tx.date);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!grouped[key]) {
+        grouped[key] = { label: `${monthNames[d.getMonth()]} ${d.getFullYear()}`, total: 0, items: [] };
+      }
+      grouped[key].total += tx.amount;
+      grouped[key].items.push(tx);
+    });
+    return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label)).slice(0, 6);
+  }, [futureInstallments]);
+
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
