@@ -3,15 +3,18 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
+import ImpersonationModal from '@/components/ImpersonationModal';
 import { ArrowLeft, Lock, Unlock, Trash2, ChevronLeft, ChevronRight, UserCheck, Wallet, CreditCard, PiggyBank } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { users, user: currentUser, toggleUserStatus, deleteUser, startImpersonation } = useAuth();
+  const { users, user: currentUser, toggleUserStatus, deleteUser } = useAuth();
   const { getUserTransactions, getUserAccounts, getUserDebts, getUserInvestments, getCategoryName } = useFinance();
   const { addLog } = useAdminLogs();
+  const { requestImpersonation, pendingTarget } = useImpersonation();
 
   const targetUser = users.find(u => u.id === id);
 
@@ -62,14 +65,20 @@ export default function AdminUserDetailPage() {
   };
 
   const handleImpersonate = () => {
-    startImpersonation(targetUser.id);
-    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'impersonou usuário', targetUserId: targetUser.id, targetUserName: targetUser.name });
-    toast.success(`Visualizando como ${targetUser.name}`);
-    navigate('/dashboard');
+    if (targetUser.role === 'admin') {
+      toast.error('Não é possível impersonar outro administrador');
+      return;
+    }
+    requestImpersonation(targetUser);
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Impersonation Modal */}
+      {pendingTarget && (
+        <ImpersonationModal onSuccess={() => navigate('/dashboard')} />
+      )}
+
       <button onClick={() => navigate('/admin/users')} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Voltar para lista
       </button>
@@ -80,10 +89,12 @@ export default function AdminUserDetailPage() {
           <p className="text-muted-foreground text-sm">{targetUser.email}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={handleImpersonate}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors">
-            <UserCheck className="h-4 w-4" /> Visualizar como
-          </button>
+          {targetUser.role !== 'admin' && (
+            <button onClick={handleImpersonate}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors">
+              <UserCheck className="h-4 w-4" /> Entrar como usuário
+            </button>
+          )}
           <button onClick={handleBlock}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${targetUser.status === 'active' ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
             {targetUser.status === 'active' ? <><Lock className="h-4 w-4" /> Bloquear</> : <><Unlock className="h-4 w-4" /> Desbloquear</>}
@@ -133,7 +144,6 @@ export default function AdminUserDetailPage() {
         </div>
       </div>
 
-      {/* Aggregated data */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="finance-card flex items-start gap-3">
           <div className="p-2 rounded-lg bg-accent"><Wallet className="h-5 w-5 text-primary" /></div>

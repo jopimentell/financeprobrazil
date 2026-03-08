@@ -5,19 +5,21 @@ import { HeaderBar } from '@/components/HeaderBar';
 import { FloatingActionButton } from '@/components/FloatingActionButton';
 import { TransactionModal } from '@/components/TransactionModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const { user, isAdmin } = useAuth();
+  const { isImpersonating } = useImpersonation();
   const [fabModal, setFabModal] = useState(false);
   const [fabType, setFabType] = useState<'income' | 'expense'>('expense');
 
   if (!user) return <Navigate to="/login" replace />;
-  // Admin users cannot access financial pages
-  if (isAdmin) return <Navigate to="/admin/dashboard" replace />;
+  // Admin users cannot access financial pages unless impersonating
+  if (isAdmin && !isImpersonating) return <Navigate to="/admin/dashboard" replace />;
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className={`flex min-h-screen w-full bg-background ${isImpersonating ? 'pt-[52px]' : ''}`}>
       <SidebarNavigation collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
       <div className="flex-1 flex flex-col min-h-screen w-full">
         <HeaderBar />

@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useAuth, User } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
+import { useImpersonation } from '@/contexts/ImpersonationContext';
+import ImpersonationModal from '@/components/ImpersonationModal';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronLeft, ChevronRight, Shield, Lock, Unlock, Trash2, Eye, ArrowUpDown, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,9 +12,10 @@ type SortKey = 'name' | 'createdAt' | 'transactions';
 type SortDir = 'asc' | 'desc';
 
 export default function AdminUsersPage() {
-  const { users, user: currentUser, updateUserRole, toggleUserStatus, deleteUser, startImpersonation } = useAuth();
+  const { users, user: currentUser, updateUserRole, toggleUserStatus, deleteUser } = useAuth();
   const { getUserTransactions } = useFinance();
   const { addLog } = useAdminLogs();
+  const { requestImpersonation, pendingTarget } = useImpersonation();
   const navigate = useNavigate();
 
   const [search, setSearch] = useState('');
@@ -35,7 +38,6 @@ export default function AdminUsersPage() {
       list = list.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
     }
     if (statusFilter !== 'all') list = list.filter(u => u.status === statusFilter);
-
     list.sort((a, b) => {
       let cmp = 0;
       if (sortKey === 'name') cmp = a.name.localeCompare(b.name);
@@ -74,14 +76,20 @@ export default function AdminUsersPage() {
   };
 
   const handleImpersonate = (u: User) => {
-    startImpersonation(u.id);
-    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'impersonou usuário', targetUserId: u.id, targetUserName: u.name });
-    toast.success(`Visualizando como ${u.name}`);
-    navigate('/dashboard');
+    if (u.role === 'admin') {
+      toast.error('Não é possível impersonar outro administrador');
+      return;
+    }
+    requestImpersonation(u);
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Impersonation Modal */}
+      {pendingTarget && (
+        <ImpersonationModal onSuccess={() => navigate('/dashboard')} />
+      )}
+
       <h1 className="text-2xl font-bold">Gestão de Usuários</h1>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -146,7 +154,7 @@ export default function AdminUsersPage() {
                       <button onClick={() => navigate(`/admin/users/${u.id}`)} className="p-1.5 rounded hover:bg-accent" title="Ver perfil">
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </button>
-                      <button onClick={() => handleImpersonate(u)} className="p-1.5 rounded hover:bg-accent" title="Visualizar como este usuário">
+                      <button onClick={() => handleImpersonate(u)} className="p-1.5 rounded hover:bg-accent" title="Entrar como este usuário">
                         <UserCheck className="h-4 w-4 text-amber-500" />
                       </button>
                       <button onClick={() => handleBlock(u)} className="p-1.5 rounded hover:bg-accent" title={u.status === 'active' ? 'Bloquear' : 'Desbloquear'}>
