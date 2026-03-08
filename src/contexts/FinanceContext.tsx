@@ -273,16 +273,48 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const getUserDebts = useCallback((userId: string) => financeService.getDebts(userId), []);
   const getUserInvestments = useCallback((userId: string) => financeService.getInvestments(userId), []);
 
+  // Credit card operations
+  const addCreditCardFn = useCallback((c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => {
+    const newCard = financeService.addCreditCard(currentUserId, c);
+    setCreditCards(prev => [...prev, newCard]);
+  }, [currentUserId]);
+
+  const deleteCreditCardFn = useCallback((id: string) => {
+    financeService.deleteCreditCard(currentUserId, id);
+    setCreditCards(prev => prev.filter(x => x.id !== id));
+    setCreditCardExpenses(prev => prev.filter(x => x.cardId !== id));
+  }, [currentUserId]);
+
+  const addCreditCardExpenseFn = useCallback((e: Omit<CreditCardExpense, 'id' | 'userId'>) => {
+    const generated = financeService.addCreditCardExpense(currentUserId, e);
+    setCreditCardExpenses(prev => [...prev, ...generated]);
+  }, [currentUserId]);
+
+  const deleteCreditCardExpenseFn = useCallback((e: Omit<CreditCardExpense, 'id' | 'userId'>) => {
+    // Find the actual expense by matching fields
+    const all = financeService.getCreditCardExpenses(currentUserId);
+    const found = all.find(x => x.cardId === e.cardId && x.description === e.description && x.purchaseDate === e.purchaseDate);
+    if (found) {
+      financeService.deleteCreditCardExpense(currentUserId, found.id);
+      const updated = financeService.getCreditCardExpenses(currentUserId);
+      setCreditCardExpenses(updated);
+    }
+  }, [currentUserId]);
+
   return (
     <FinanceContext.Provider value={{
       transactions, categories, accounts, debts, investments, forecast,
+      creditCards, creditCardExpenses,
       allTransactions, allCategories, allAccounts, allDebts, allInvestments,
       addTransaction, updateTransaction, deleteTransaction,
       addCategory, updateCategory, deleteCategory,
       addAccount, updateAccount, deleteAccount,
       addDebt, updateDebt, deleteDebt,
       addInvestment, updateInvestment, deleteInvestment,
-      updateForecast: updateForecastFn, syncToSheet,
+      updateForecast: updateForecastFn,
+      addCreditCard: addCreditCardFn, deleteCreditCard: deleteCreditCardFn,
+      addCreditCardExpense: addCreditCardExpenseFn, deleteCreditCardExpense: deleteCreditCardExpenseFn,
+      syncToSheet,
       getMonthTransactions, getYearTransactions,
       getCategoryName, getAccountName, getCategoryColor,
       getUserTransactions, getUserCategories, getUserAccounts, getUserDebts, getUserInvestments,
