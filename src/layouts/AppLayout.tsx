@@ -9,11 +9,12 @@ import { useImpersonation } from '@/contexts/ImpersonationContext';
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const { isImpersonating } = useImpersonation();
   const [fabModal, setFabModal] = useState(false);
   const [fabType, setFabType] = useState<'income' | 'expense'>('expense');
 
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   // Admin users cannot access financial pages unless impersonating
   if (isAdmin && !isImpersonating) return <Navigate to="/admin/dashboard" replace />;
