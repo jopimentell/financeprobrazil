@@ -57,7 +57,7 @@ const App = () => (
               <ImpersonationBanner />
               <BrowserRouter>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/" element={<Welcome />} />
                   <Route element={<AuthLayout />}>
                     <Route path="/login" element={<Login />} />
                   </Route>
