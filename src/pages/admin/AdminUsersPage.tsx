@@ -171,7 +171,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center gap-2">
                         {u.name}
                         {isSelf && <span className="text-xs text-muted-foreground">(você)</span>}
-                        {u.isProtectedOwner && <Shield className="h-3.5 w-3.5 text-destructive" title="Owner protegido" />}
+                        {u.isProtectedOwner && <span title="Owner protegido"><Shield className="h-3.5 w-3.5 text-destructive" /></span>}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{u.email}</td>
