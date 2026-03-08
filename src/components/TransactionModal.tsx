@@ -60,13 +60,16 @@ export function TransactionModal({ open, onClose, transaction, defaultType }: Tr
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-foreground/50" onClick={onClose} />
-      <div className="relative bg-card rounded-xl shadow-lg w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto animate-fade-in">
-        <div className="flex justify-between items-center mb-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card rounded-t-2xl sm:rounded-xl shadow-lg w-full sm:max-w-lg sm:mx-4 h-[95vh] sm:h-auto sm:max-h-[90vh] flex flex-col animate-fade-in">
+        {/* Header */}
+        <div className="flex justify-between items-center p-4 sm:p-6 border-b border-border shrink-0">
           <h2 className="text-lg font-bold">{isEdit ? 'Editar Transação' : 'Nova Transação'}</h2>
           <button onClick={onClose} className="p-1 rounded hover:bg-accent"><X className="h-5 w-5" /></button>
         </div>
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="flex gap-2">
             <button type="button" onClick={() => setForm(f => ({ ...f, type: 'income', categoryId: '' }))}
