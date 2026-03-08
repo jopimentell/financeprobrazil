@@ -17,6 +17,8 @@ export interface UserFinanceData {
   debts: Debt[];
   investments: Investment[];
   forecast: Forecast[];
+  creditCards: CreditCard[];
+  creditCardExpenses: CreditCardExpense[];
 }
 
 export interface Database {
