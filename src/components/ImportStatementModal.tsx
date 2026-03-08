@@ -5,6 +5,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { Transaction } from '@/types/finance';
 import { Upload, FileText, ClipboardPaste, CheckCircle2, AlertTriangle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
 
 interface ParsedRow {
   date: string;
@@ -15,26 +16,7 @@ interface ParsedRow {
   suggestedCategory: string;
   selected: boolean;
   isDuplicate: boolean;
-}
-
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  'Alimentação': ['supermercado', 'mercado', 'padaria', 'restaurante', 'ifood', 'rappi', 'burger', 'pizza', 'lanche', 'açougue'],
-  'Transporte': ['uber', '99', 'cabify', 'combustível', 'gasolina', 'estacionamento', 'pedágio', 'ônibus', 'metrô'],
-  'Assinaturas': ['netflix', 'spotify', 'disney', 'hbo', 'amazon prime', 'youtube', 'apple', 'google one', 'deezer'],
-  'Saúde': ['farmácia', 'drogaria', 'hospital', 'clínica', 'médico', 'dentista', 'plano de saúde', 'unimed'],
-  'Educação': ['escola', 'faculdade', 'curso', 'udemy', 'alura', 'livro'],
-  'Moradia': ['aluguel', 'condomínio', 'luz', 'energia', 'água', 'gás', 'internet', 'telefone'],
-  'Lazer': ['cinema', 'teatro', 'show', 'ingresso', 'viagem', 'hotel', 'bar'],
-  'Salário': ['salário', 'salario', 'pagamento', 'vencimento', 'remuneração'],
-  'Freelance': ['freelance', 'serviço prestado', 'consultoria', 'projeto'],
-};
-
-function suggestCategory(description: string): string {
-  const lower = description.toLowerCase();
-  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some(kw => lower.includes(kw))) return cat;
-  }
-  return 'Outros';
+  typeConfirmed: boolean;
 }
 
 function parseDate(raw: string): string {
