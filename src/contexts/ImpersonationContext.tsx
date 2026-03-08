@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth, User } from '@/contexts/AuthContext';
-import type { } from 'react';
 export interface ImpersonationLog {
   id: string;
   adminId: string;
