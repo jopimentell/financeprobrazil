@@ -14,6 +14,7 @@ const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
 
 export default function Dashboard() {
   const now = new Date();
+  const navigate = useNavigate();
   const { getMonthTransactions, getYearTransactions, transactions } = useFinance();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
