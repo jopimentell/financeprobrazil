@@ -36,15 +36,14 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Mobile: bottom sheet fullscreen style
         "fixed z-50 w-full border bg-background shadow-lg duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        // Mobile: slide up from bottom, occupy near-full screen
+        // Mobile: bottom sheet
         "inset-x-0 bottom-0 h-[95vh] rounded-t-2xl p-4",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-        // Desktop: centered dialog
-        "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[90vh] sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:p-6 sm:max-w-lg",
-        "sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:slide-out-to-left-1/2 sm:data-[state=closed]:slide-out-to-top-[48%] sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%]",
+        // Desktop: centered via inset-0 m-auto (no translate clipping)
+        "sm:inset-0 sm:m-auto sm:h-fit sm:max-h-[80vh] sm:max-w-[min(80vw,32rem)] sm:rounded-lg sm:p-6",
+        "sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
         "flex flex-col",
         className,
       )}
