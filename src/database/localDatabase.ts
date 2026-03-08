@@ -131,6 +131,7 @@ export function ensureUserData(userId: string): UserFinanceData {
     forecast: createDefaultForecast(userId),
     creditCards: [],
     creditCardExpenses: [],
+    paidInvoices: [],
   };
   db.userData[userId] = data;
   saveDatabase(db);
