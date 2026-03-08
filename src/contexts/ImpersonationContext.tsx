@@ -143,7 +143,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     };
     setLogs(prev => [log, ...prev]);
     return log;
-  }, [adminId, realUser?.name, pendingTarget, session]);
+  }, [adminId, adminName, pendingTarget, session]);
 
   // Session countdown timer
   useEffect(() => {
