@@ -7,6 +7,7 @@ import { FinanceProvider } from "@/contexts/FinanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AdminLogProvider } from "@/contexts/AdminLogContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
+import { PlanProvider } from "@/contexts/PlanContext";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import AppLayout from "@/layouts/AppLayout";
 import AdminLayout from "@/layouts/AdminLayout";
