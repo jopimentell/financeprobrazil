@@ -11,6 +11,8 @@ interface FinanceContextType {
   debts: Debt[];
   investments: Investment[];
   forecast: Forecast[];
+  creditCards: CreditCard[];
+  creditCardExpenses: CreditCardExpense[];
   allTransactions: Transaction[];
   allCategories: Category[];
   allAccounts: Account[];
@@ -32,6 +34,10 @@ interface FinanceContextType {
   updateInvestment: (i: Investment) => void;
   deleteInvestment: (id: string) => void;
   updateForecast: (f: Forecast[]) => void;
+  addCreditCard: (c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => void;
+  deleteCreditCard: (id: string) => void;
+  addCreditCardExpense: (e: Omit<CreditCardExpense, 'id' | 'userId'>) => void;
+  deleteCreditCardExpense: (e: Omit<CreditCardExpense, 'id' | 'userId'>) => void;
   syncToSheet: () => void;
   getMonthTransactions: (year: number, month: number) => Transaction[];
   getYearTransactions: (year: number) => Transaction[];
