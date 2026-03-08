@@ -9,7 +9,7 @@ interface FinanceMetricCardProps {
   onClick?: () => void;
 }
 
-export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', isCurrency = true }: FinanceMetricCardProps) {
+export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', isCurrency = true, onClick }: FinanceMetricCardProps) {
   const colorClass = {
     income: 'finance-income',
     expense: 'finance-expense',
@@ -25,7 +25,13 @@ export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', 
   }[type];
 
   return (
-    <div className="finance-metric">
+    <div
+      className={`finance-metric ${onClick ? 'cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all duration-200' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
+    >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{title}</span>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={bgStyle}>
