@@ -314,6 +314,11 @@ export function ImportStatementModal({ open, onClose }: Props) {
     let imported = 0;
 
     for (const row of selectedRows) {
+      // Learn from user choices
+      learnType(row.description, row.type);
+      const catName = categories.find(c => c.id === row.categoryId)?.name;
+      if (catName) learnCategory(row.description, catName);
+
       addTransaction({
         description: row.description,
         amount: row.amount,
