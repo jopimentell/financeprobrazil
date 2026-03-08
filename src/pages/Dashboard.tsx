@@ -10,8 +10,9 @@ import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { EmptyState } from '@/components/EmptyState';
 import { DashboardSortableCard } from '@/components/DashboardSortableCard';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock, CreditCard as CreditCardIcon } from 'lucide-react';
 import { Transaction } from '@/types/finance';
+import { computeInvoices } from '@/services/financeService';
 import {
   DndContext,
   closestCenter,
@@ -29,7 +30,7 @@ import {
 
 const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-const DEFAULT_LAYOUT = ['metrics', 'forecast-installments', 'charts', 'pending', 'annual-table', 'recent-transactions'];
+const DEFAULT_LAYOUT = ['metrics', 'credit-cards-summary', 'forecast-installments', 'charts', 'pending', 'annual-table', 'recent-transactions'];
 
 function loadLayout(userId: string): string[] {
   try {
@@ -48,7 +49,7 @@ export default function Dashboard() {
   const now = new Date();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getMonthTransactions, getYearTransactions, transactions: allUserTx } = useFinance();
+  const { getMonthTransactions, getYearTransactions, transactions: allUserTx, creditCards, creditCardExpenses, paidInvoices } = useFinance();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [annualView, setAnnualView] = useState(false);
@@ -84,6 +85,26 @@ export default function Dashboard() {
 
   const incomeTrend = !annualView && prevIncome > 0 ? ((income - prevIncome) / prevIncome) * 100 : null;
   const expenseTrend = !annualView && prevExpense > 0 ? ((expense - prevExpense) / prevExpense) * 100 : null;
+
+  // Credit card invoice summary
+  const ccSummary = useMemo(() => {
+    if (creditCards.length === 0) return null;
+    let openTotal = 0;
+    let closedTotal = 0;
+    let overdueTotal = 0;
+    let futureTotal = 0;
+    creditCards.forEach(card => {
+      const exps = creditCardExpenses.filter(e => e.cardId === card.id);
+      const invs = computeInvoices(card, exps, paidInvoices);
+      invs.forEach(inv => {
+        if (inv.status === 'open') openTotal += inv.total;
+        else if (inv.status === 'closed') closedTotal += inv.total;
+        else if (inv.status === 'overdue') overdueTotal += inv.total;
+        else if (inv.status === 'future') futureTotal += inv.total;
+      });
+    });
+    return { openTotal, closedTotal, overdueTotal, futureTotal };
+  }, [creditCards, creditCardExpenses, paidInvoices]);
 
   const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
@@ -161,6 +182,44 @@ export default function Dashboard() {
                 title="Resultado" value={balance} icon={Wallet}
                 type={balance >= 0 ? 'income' : 'expense'}
               />
+            </div>
+          </DashboardSortableCard>
+        );
+      case 'credit-cards-summary':
+        if (!ccSummary || annualView || (ccSummary.openTotal === 0 && ccSummary.closedTotal === 0 && ccSummary.overdueTotal === 0 && ccSummary.futureTotal === 0)) return null;
+        return (
+          <DashboardSortableCard id="credit-cards-summary" key="credit-cards-summary" className="col-span-full">
+            <div className="finance-card">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCardIcon className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-muted-foreground">Cartões de Crédito</h3>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {ccSummary.openTotal > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Faturas Abertas</p>
+                    <p className="text-lg font-bold text-chart-4">R$ {ccSummary.openTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+                {ccSummary.closedTotal > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Aguardando Pagamento</p>
+                    <p className="text-lg font-bold text-accent-foreground">R$ {ccSummary.closedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+                {ccSummary.overdueTotal > 0 && (
+                  <div className="border border-destructive/50 rounded-lg p-3">
+                    <p className="text-xs text-destructive">Faturas Vencidas</p>
+                    <p className="text-lg font-bold text-destructive">R$ {ccSummary.overdueTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+                {ccSummary.futureTotal > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Faturas Futuras</p>
+                    <p className="text-lg font-bold text-muted-foreground">R$ {ccSummary.futureTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+              </div>
             </div>
           </DashboardSortableCard>
         );

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import * as db from '@/database/localDatabase';
 import * as financeService from '@/services/financeService';
@@ -13,6 +13,7 @@ interface FinanceContextType {
   forecast: Forecast[];
   creditCards: CreditCard[];
   creditCardExpenses: CreditCardExpense[];
+  paidInvoices: PaidInvoice[];
   allTransactions: Transaction[];
   allCategories: Category[];
   allAccounts: Account[];
@@ -35,9 +36,12 @@ interface FinanceContextType {
   deleteInvestment: (id: string) => void;
   updateForecast: (f: Forecast[]) => void;
   addCreditCard: (c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => void;
+  updateCreditCard: (c: CreditCard) => void;
   deleteCreditCard: (id: string) => void;
   addCreditCardExpense: (e: Omit<CreditCardExpense, 'id' | 'userId'>) => void;
-  deleteCreditCardExpense: (e: Omit<CreditCardExpense, 'id' | 'userId'>) => void;
+  updateCreditCardExpense: (id: string, updates: Partial<CreditCardExpense>) => void;
+  deleteCreditCardExpense: (id: string) => void;
+  payInvoice: (cardId: string, month: string, amount: number) => void;
   syncToSheet: () => void;
   getMonthTransactions: (year: number, month: number) => Transaction[];
   getYearTransactions: (year: number) => Transaction[];
@@ -60,7 +64,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const currentUserId = user?.id || '';
   const isAdmin = user?.role === 'admin';
 
-  // Per-user state (loaded from centralized database)
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -69,11 +72,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [forecast, setForecast] = useState<Forecast[]>([]);
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [creditCardExpenses, setCreditCardExpenses] = useState<CreditCardExpense[]>([]);
+  const [paidInvoices, setPaidInvoices] = useState<PaidInvoice[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => financeService.getSystemLogs());
 
   const loadedUserRef = useRef<string>('');
 
-  // Load user data from centralized database when user changes
   useEffect(() => {
     if (!currentUserId || currentUserId === loadedUserRef.current) return;
     loadedUserRef.current = currentUserId;
@@ -81,7 +84,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (isAdmin) {
       setTransactions([]); setCategories([]); setAccounts([]);
       setDebts([]); setInvestments([]); setForecast([]);
-      setCreditCards([]); setCreditCardExpenses([]);
+      setCreditCards([]); setCreditCardExpenses([]); setPaidInvoices([]);
       return;
     }
 
@@ -94,14 +97,13 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setForecast(data.forecast);
     setCreditCards(data.creditCards || []);
     setCreditCardExpenses(data.creditCardExpenses || []);
+    setPaidInvoices(data.paidInvoices || []);
   }, [currentUserId, isAdmin]);
 
-  // Reset loaded ref on logout
   useEffect(() => {
     if (!currentUserId) loadedUserRef.current = '';
   }, [currentUserId]);
 
-  // Persist helper — writes current entity to centralized DB
   const persist = useCallback((entity: keyof db.UserFinanceData, value: unknown) => {
     if (!currentUserId || isAdmin) return;
     const dbInstance = db.loadDatabase();
@@ -110,7 +112,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     db.saveDatabase(dbInstance);
   }, [currentUserId, isAdmin]);
 
-  // Persist per-user data on changes
   useEffect(() => { persist('transactions', transactions); }, [transactions, persist]);
   useEffect(() => { persist('categories', categories); }, [categories, persist]);
   useEffect(() => { persist('accounts', accounts); }, [accounts, persist]);
@@ -119,12 +120,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { persist('forecast', forecast); }, [forecast, persist]);
   useEffect(() => { persist('creditCards', creditCards); }, [creditCards, persist]);
   useEffect(() => { persist('creditCardExpenses', creditCardExpenses); }, [creditCardExpenses, persist]);
+  useEffect(() => { persist('paidInvoices', paidInvoices); }, [paidInvoices, persist]);
 
-  useEffect(() => {
-    // System logs are saved through the service layer
-  }, [systemLogs]);
-
-  // Admin aggregated data
   const adminData = useMemo(() => {
     if (!isAdmin) return null;
     const nonAdminIds = allUsers.filter(u => u.role !== 'admin').map(u => u.id);
@@ -209,7 +206,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteDebt = useCallback((id: string) => {
     financeService.deleteDebt(currentUserId, id);
     setDebts(prev => prev.filter(x => x.id !== id));
-    // Reload transactions to reflect removed future installments
     const data = db.getUserData(currentUserId);
     setTransactions(data.transactions);
     addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'delete_debt', entity: 'debt', entityId: id });
@@ -237,7 +233,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const syncToSheet = useCallback(() => {
     console.log('Syncing to Google Sheets...');
-    setTimeout(() => console.log('Sync complete'), 1000);
   }, []);
 
   const getMonthTransactions = useCallback((year: number, month: number) => {
@@ -266,7 +261,6 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return all.find(c => c.id === id)?.color || '#6b7280';
   }, [categories, allCategories, isAdmin]);
 
-  // Admin helpers — read from centralized database
   const getUserTransactions = useCallback((userId: string) => financeService.getTransactions(userId), []);
   const getUserCategories = useCallback((userId: string) => financeService.getCategories(userId), []);
   const getUserAccounts = useCallback((userId: string) => financeService.getAccounts(userId), []);
@@ -277,6 +271,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const addCreditCardFn = useCallback((c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => {
     const newCard = financeService.addCreditCard(currentUserId, c);
     setCreditCards(prev => [...prev, newCard]);
+  }, [currentUserId]);
+
+  const updateCreditCardFn = useCallback((c: CreditCard) => {
+    financeService.updateCreditCard(currentUserId, c);
+    setCreditCards(prev => prev.map(x => x.id === c.id ? c : x));
   }, [currentUserId]);
 
   const deleteCreditCardFn = useCallback((id: string) => {
@@ -290,21 +289,31 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setCreditCardExpenses(prev => [...prev, ...generated]);
   }, [currentUserId]);
 
-  const deleteCreditCardExpenseFn = useCallback((e: Omit<CreditCardExpense, 'id' | 'userId'>) => {
-    // Find the actual expense by matching fields
-    const all = financeService.getCreditCardExpenses(currentUserId);
-    const found = all.find(x => x.cardId === e.cardId && x.description === e.description && x.purchaseDate === e.purchaseDate);
-    if (found) {
-      financeService.deleteCreditCardExpense(currentUserId, found.id);
-      const updated = financeService.getCreditCardExpenses(currentUserId);
-      setCreditCardExpenses(updated);
-    }
+  const updateCreditCardExpenseFn = useCallback((id: string, updates: Partial<CreditCardExpense>) => {
+    financeService.updateCreditCardExpense(currentUserId, id, updates);
+    setCreditCardExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   }, [currentUserId]);
+
+  const deleteCreditCardExpenseFn = useCallback((id: string) => {
+    financeService.deleteCreditCardExpense(currentUserId, id);
+    const updated = financeService.getCreditCardExpenses(currentUserId);
+    setCreditCardExpenses(updated);
+  }, [currentUserId]);
+
+  const payInvoiceFn = useCallback((cardId: string, month: string, amount: number) => {
+    const categoryId = categories.find(c => c.type === 'expense')?.id || '';
+    const accountId = accounts[0]?.id || '';
+    const { paidInvoice, transaction } = financeService.markInvoicePaid(
+      currentUserId, cardId, month, amount, categoryId, accountId
+    );
+    setPaidInvoices(prev => [...prev, paidInvoice]);
+    setTransactions(prev => [...prev, transaction]);
+  }, [currentUserId, categories, accounts]);
 
   return (
     <FinanceContext.Provider value={{
       transactions, categories, accounts, debts, investments, forecast,
-      creditCards, creditCardExpenses,
+      creditCards, creditCardExpenses, paidInvoices,
       allTransactions, allCategories, allAccounts, allDebts, allInvestments,
       addTransaction, updateTransaction, deleteTransaction,
       addCategory, updateCategory, deleteCategory,
@@ -312,8 +321,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       addDebt, updateDebt, deleteDebt,
       addInvestment, updateInvestment, deleteInvestment,
       updateForecast: updateForecastFn,
-      addCreditCard: addCreditCardFn, deleteCreditCard: deleteCreditCardFn,
-      addCreditCardExpense: addCreditCardExpenseFn, deleteCreditCardExpense: deleteCreditCardExpenseFn,
+      addCreditCard: addCreditCardFn, updateCreditCard: updateCreditCardFn,
+      deleteCreditCard: deleteCreditCardFn,
+      addCreditCardExpense: addCreditCardExpenseFn,
+      updateCreditCardExpense: updateCreditCardExpenseFn,
+      deleteCreditCardExpense: deleteCreditCardExpenseFn,
+      payInvoice: payInvoiceFn,
       syncToSheet,
       getMonthTransactions, getYearTransactions,
       getCategoryName, getAccountName, getCategoryColor,

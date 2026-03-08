@@ -5,7 +5,7 @@
  * replace these functions with API calls — no frontend changes needed.
  */
 
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice } from '@/types/finance';
 import { createDefaultCategories, createDefaultAccounts, createDefaultForecast } from '@/data/seedData';
 
 // ── Types ──────────────────────────────────────────────
@@ -19,6 +19,7 @@ export interface UserFinanceData {
   forecast: Forecast[];
   creditCards: CreditCard[];
   creditCardExpenses: CreditCardExpense[];
+  paidInvoices: PaidInvoice[];
 }
 
 export interface Database {
@@ -101,6 +102,7 @@ function migrateLegacyData(): Database {
       forecast: loadLegacy(userId, 'forecast'),
       creditCards: loadLegacy(userId, 'creditCards'),
       creditCardExpenses: loadLegacy(userId, 'creditCardExpenses'),
+      paidInvoices: loadLegacy(userId, 'paidInvoices'),
     };
   }
 
@@ -130,6 +132,7 @@ export function ensureUserData(userId: string): UserFinanceData {
     forecast: createDefaultForecast(userId),
     creditCards: [],
     creditCardExpenses: [],
+    paidInvoices: [],
   };
   db.userData[userId] = data;
   saveDatabase(db);
@@ -138,7 +141,7 @@ export function ensureUserData(userId: string): UserFinanceData {
 
 export function getUserData(userId: string): UserFinanceData {
   const db = loadDatabase();
-  return db.userData[userId] || { transactions: [], categories: [], accounts: [], debts: [], investments: [], forecast: [], creditCards: [], creditCardExpenses: [] };
+  return db.userData[userId] || { transactions: [], categories: [], accounts: [], debts: [], investments: [], forecast: [], creditCards: [], creditCardExpenses: [], paidInvoices: [] };
 }
 
 export function setUserData(userId: string, data: UserFinanceData): void {
