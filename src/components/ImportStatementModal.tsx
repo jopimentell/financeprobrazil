@@ -19,8 +19,8 @@ function parsePastedText(text: string): ParsedRow[] {
     if (match) {
       const date = parseDate(match[1]);
       const description = match[2].trim();
-      const rawAmount = match[3].replace(/[R$\s]/g, '').replace(',', '.');
-      const amount = parseFloat(rawAmount);
+      const amount = parseBRNumber(match[3]);
+
       if (isNaN(amount)) return null;
 
       const detected = detectTransactionType(description, amount);
