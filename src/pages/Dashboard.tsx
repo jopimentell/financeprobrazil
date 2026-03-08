@@ -30,7 +30,7 @@ import {
 
 const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-const DEFAULT_LAYOUT = ['metrics', 'forecast-installments', 'charts', 'pending', 'annual-table', 'recent-transactions'];
+const DEFAULT_LAYOUT = ['metrics', 'credit-cards-summary', 'forecast-installments', 'charts', 'pending', 'annual-table', 'recent-transactions'];
 
 function loadLayout(userId: string): string[] {
   try {
