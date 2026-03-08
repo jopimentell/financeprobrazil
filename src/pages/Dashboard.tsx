@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useFinance } from '@/contexts/FinanceContext';
 import { MonthNavigator } from '@/components/MonthNavigator';
 import { FinanceMetricCard } from '@/components/FinanceMetricCard';
@@ -13,6 +14,7 @@ const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
 
 export default function Dashboard() {
   const now = new Date();
+  const navigate = useNavigate();
   const { getMonthTransactions, getYearTransactions, transactions } = useFinance();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
@@ -63,8 +65,14 @@ export default function Dashboard() {
       {/* Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         <FinanceMetricCard title={annualView ? 'Saldo Anual' : 'Saldo do Mês'} value={balance} icon={DollarSign} type={balance >= 0 ? 'info' : 'expense'} />
-        <FinanceMetricCard title="Receitas" value={income} icon={TrendingUp} type="income" />
-        <FinanceMetricCard title="Despesas" value={expense} icon={TrendingDown} type="expense" />
+        <FinanceMetricCard
+          title="Receitas" value={income} icon={TrendingUp} type="income"
+          onClick={() => navigate(annualView ? `/receitas?year=${year}` : `/receitas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+        />
+        <FinanceMetricCard
+          title="Despesas" value={expense} icon={TrendingDown} type="expense"
+          onClick={() => navigate(annualView ? `/despesas?year=${year}` : `/despesas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+        />
         <FinanceMetricCard title="Resultado" value={balance} icon={Wallet} type={balance >= 0 ? 'income' : 'expense'} />
       </div>
 
