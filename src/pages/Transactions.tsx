@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
+import { ImportStatementModal } from '@/components/ImportStatementModal';
 import { Transaction } from '@/types/finance';
-import { Plus, Filter } from 'lucide-react';
+import { Plus, Filter, Upload } from 'lucide-react';
 
 export default function Transactions() {
   const { transactions, categories } = useFinance();
