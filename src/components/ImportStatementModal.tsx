@@ -161,15 +161,19 @@ function parseOFX(text: string): ParsedRow[] {
     const amount = parseFloat(trnAmt.replace(',', '.'));
     if (isNaN(amount)) continue;
 
+    const desc = name || 'Transação importada';
+    const detected = detectTransactionType(desc, amount);
+    const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
     rows.push({
       date,
-      description: name || 'Transação importada',
+      description: desc,
       amount: Math.abs(amount),
-      type: amount >= 0 ? 'income' : 'expense',
+      type,
       categoryId: '',
-      suggestedCategory: suggestCategory(name),
+      suggestedCategory: suggestCategory(desc),
       selected: true,
       isDuplicate: false,
+      typeConfirmed: detected !== 'unknown',
     });
   }
 
