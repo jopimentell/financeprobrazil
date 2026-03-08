@@ -3,21 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Transaction } from '@/types/finance';
-import { Upload, FileText, ClipboardPaste, CheckCircle2, AlertTriangle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, FileText, ClipboardPaste, CheckCircle2, AlertTriangle, X, ChevronLeft, ChevronRight, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
-
-interface ParsedRow {
-  date: string;
-  description: string;
-  amount: number;
-  type: 'income' | 'expense';
-  categoryId: string;
-  suggestedCategory: string;
-  selected: boolean;
-  isDuplicate: boolean;
-  typeConfirmed: boolean;
-}
+import { parseCSVSmart, BANK_NAMES, ParsedRow, BankType, parseDate, isValidDate } from '@/utils/parsers';
 
 function parseDate(raw: string): string {
   // Try common formats: DD/MM/YYYY, DD/MM, YYYY-MM-DD, DD-MM-YYYY
