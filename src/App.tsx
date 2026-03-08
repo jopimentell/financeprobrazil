@@ -20,6 +20,7 @@ import Despesas from "@/pages/Despesas";
 import Categories from "@/pages/Categories";
 import Accounts from "@/pages/Accounts";
 import Debts from "@/pages/Debts";
+import CreditCardsPage from "@/pages/CreditCards";
 import Investments from "@/pages/Investments";
 import ForecastPage from "@/pages/Forecast";
 import Reports from "@/pages/Reports";
