@@ -4,7 +4,7 @@
  * When migrating to a real backend, replace these with API calls.
  */
 
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice } from '@/types/finance';
 import * as db from '@/database/localDatabase';
 
 const uid = () => crypto.randomUUID();
