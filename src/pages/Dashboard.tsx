@@ -10,8 +10,9 @@ import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { EmptyState } from '@/components/EmptyState';
 import { DashboardSortableCard } from '@/components/DashboardSortableCard';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock, CreditCard as CreditCardIcon } from 'lucide-react';
 import { Transaction } from '@/types/finance';
+import { computeInvoices } from '@/services/financeService';
 import {
   DndContext,
   closestCenter,
