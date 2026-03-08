@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useAuth, User } from '@/contexts/AuthContext';
+import { useAuth, User, canModifyUser, canImpersonate, hasPermission, ROLE_LABELS, ROLE_COLORS, UserRole } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
@@ -10,15 +10,18 @@ import { toast } from 'sonner';
 
 type SortKey = 'name' | 'createdAt' | 'transactions';
 type SortDir = 'asc' | 'desc';
-type RoleFilter = 'all' | 'user' | 'admin';
+type RoleFilter = 'all' | UserRole;
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export default function AdminUsersPage() {
-  const { users, user: currentUser, toggleUserStatus, deleteUser } = useAuth();
+  const { users, realUser, toggleUserStatus, deleteUser } = useAuth();
   const { getUserTransactions } = useFinance();
   const { addLog } = useAdminLogs();
   const { requestImpersonation, pendingTarget } = useImpersonation();
   const navigate = useNavigate();
+
+  const currentUser = realUser;
+  const myRole = currentUser?.role || 'user';
 
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
@@ -29,8 +32,6 @@ export default function AdminUsersPage() {
   const pageSize = 10;
 
   const getUserTxCount = (userId: string) => getUserTransactions(userId).length;
-  const getUserIncome = (userId: string) => getUserTransactions(userId).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const getUserExpenses = (userId: string) => getUserTransactions(userId).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   const filtered = useMemo(() => {
     let list = [...users];
@@ -59,34 +60,35 @@ export default function AdminUsersPage() {
   };
 
   const handleBlock = (u: User) => {
-    if (u.id === currentUser?.id) {
-      toast.error('Você não pode desativar sua própria conta.');
-      return;
-    }
+    if (!currentUser) return;
+    const check = canModifyUser(currentUser, u);
+    if (!check.allowed) { toast.error(check.error); return; }
     toggleUserStatus(u.id);
     const action = u.status === 'active' ? 'bloqueou' : 'desbloqueou';
-    const label = u.role === 'admin' ? 'admin' : 'usuário';
-    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: `${action} ${label}`, targetUserId: u.id, targetUserName: u.name });
-    toast.success(`${u.role === 'admin' ? 'Admin' : 'Usuário'} ${u.status === 'active' ? 'desativado' : 'reativado'}`);
+    addLog({ adminId: currentUser.id, adminName: currentUser.name, action: `${action} ${ROLE_LABELS[u.role]}`, targetUserId: u.id, targetUserName: u.name });
+    toast.success(`${ROLE_LABELS[u.role]} ${u.status === 'active' ? 'desativado' : 'reativado'}`);
   };
 
   const handleDelete = (u: User) => {
-    if (u.id === currentUser?.id) {
-      toast.error('Você não pode excluir sua própria conta.');
-      return;
-    }
+    if (!currentUser) return;
+    const check = canModifyUser(currentUser, u);
+    if (!check.allowed) { toast.error(check.error); return; }
     deleteUser(u.id);
-    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'excluiu usuário', targetUserId: u.id, targetUserName: u.name });
+    addLog({ adminId: currentUser.id, adminName: currentUser.name, action: `excluiu ${ROLE_LABELS[u.role]}`, targetUserId: u.id, targetUserName: u.name });
     toast.success('Usuário excluído');
   };
 
   const handleImpersonate = (u: User) => {
-    if (u.role === 'admin') {
-      toast.error('Não é possível impersonar outro administrador');
+    if (!currentUser) return;
+    if (!canImpersonate(currentUser, u)) {
+      toast.error('Não é possível impersonar este usuário');
       return;
     }
     requestImpersonation(u);
   };
+
+  const canCreate = hasPermission(myRole, 'create_staff');
+  const canBlock = hasPermission(myRole, 'block_users');
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -94,28 +96,26 @@ export default function AdminUsersPage() {
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Gestão de Usuários</h1>
-        <Link
-          to="/admin/admins/create"
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          <UserPlus className="h-4 w-4" /> Novo Administrador
-        </Link>
+        {canCreate && (
+          <Link to="/admin/admins/create" className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
+            <UserPlus className="h-4 w-4" /> Novo Staff
+          </Link>
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <input type="text" placeholder="Buscar por nome ou email..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }}
-            className="input-field pl-9" />
+          <input type="text" placeholder="Buscar por nome ou email..." value={search} onChange={e => { setSearch(e.target.value); setPage(0); }} className="input-field pl-9" />
         </div>
-        <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value as RoleFilter); setPage(0); }}
-          className="input-field w-full sm:w-40">
+        <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value as RoleFilter); setPage(0); }} className="input-field w-full sm:w-40">
           <option value="all">Todos os tipos</option>
-          <option value="user">Apenas Usuários</option>
-          <option value="admin">Apenas Admins</option>
+          <option value="user">Usuários</option>
+          <option value="support">Support</option>
+          <option value="admin">Admin</option>
+          <option value="owner">Owner</option>
         </select>
-        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as StatusFilter); setPage(0); }}
-          className="input-field w-full sm:w-40">
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value as StatusFilter); setPage(0); }} className="input-field w-full sm:w-40">
           <option value="all">Todos os status</option>
           <option value="active">Ativos</option>
           <option value="inactive">Bloqueados</option>
@@ -131,12 +131,9 @@ export default function AdminUsersPage() {
                   <button onClick={() => toggleSort('name')} className="flex items-center gap-1 hover:text-foreground">Nome <ArrowUpDown className="h-3 w-3" /></button>
                 </th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden sm:table-cell">Email</th>
-                <th className="text-center py-3 px-4 font-medium text-muted-foreground">Tipo</th>
+                <th className="text-center py-3 px-4 font-medium text-muted-foreground">Role</th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden md:table-cell">
                   <button onClick={() => toggleSort('createdAt')} className="flex items-center gap-1 hover:text-foreground">Cadastro <ArrowUpDown className="h-3 w-3" /></button>
-                </th>
-                <th className="text-right py-3 px-4 font-medium text-muted-foreground hidden lg:table-cell">
-                  <button onClick={() => toggleSort('transactions')} className="flex items-center gap-1 hover:text-foreground ml-auto">Transações <ArrowUpDown className="h-3 w-3" /></button>
                 </th>
                 <th className="text-left py-3 px-4 font-medium text-muted-foreground hidden md:table-cell">Último acesso</th>
                 <th className="text-center py-3 px-4 font-medium text-muted-foreground">Status</th>
@@ -146,6 +143,9 @@ export default function AdminUsersPage() {
             <tbody>
               {paginated.map(u => {
                 const isSelf = u.id === currentUser?.id;
+                const canMod = currentUser ? canModifyUser(currentUser, u).allowed : false;
+                const canImp = currentUser ? canImpersonate(currentUser, u) : false;
+
                 return (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-accent/30 transition-colors">
                     <td className="py-3 px-4 font-medium">
@@ -156,16 +156,15 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{u.email}</td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${u.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-accent text-accent-foreground'}`}>
-                        {u.role === 'admin' && <Shield className="h-3 w-3" />}
-                        {u.role === 'admin' ? 'Admin' : 'User'}
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[u.role]}`}>
+                        {(u.role === 'admin' || u.role === 'owner') && <Shield className="h-3 w-3" />}
+                        {ROLE_LABELS[u.role]}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
-                    <td className="py-3 px-4 text-right hidden lg:table-cell">{u.role === 'user' ? getUserTxCount(u.id) : '—'}</td>
                     <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{u.lastLogin}</td>
                     <td className="py-3 px-4 text-center">
-                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                      <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${u.status === 'active' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive'}`}>
                         {u.status === 'active' ? 'Ativo' : 'Bloqueado'}
                       </span>
                     </td>
@@ -174,17 +173,17 @@ export default function AdminUsersPage() {
                         <button onClick={() => navigate(`/admin/users/${u.id}`)} className="p-1.5 rounded hover:bg-accent" title="Ver perfil">
                           <Eye className="h-4 w-4 text-muted-foreground" />
                         </button>
-                        {u.role === 'user' && (
-                          <button onClick={() => handleImpersonate(u)} className="p-1.5 rounded hover:bg-accent" title="Entrar como este usuário">
+                        {canImp && (
+                          <button onClick={() => handleImpersonate(u)} className="p-1.5 rounded hover:bg-accent" title="Impersonar">
                             <UserCheck className="h-4 w-4 text-amber-500" />
                           </button>
                         )}
-                        {!isSelf && (
+                        {canBlock && canMod && (
                           <button onClick={() => handleBlock(u)} className="p-1.5 rounded hover:bg-accent" title={u.status === 'active' ? 'Desativar' : 'Reativar'}>
-                            {u.status === 'active' ? <Lock className="h-4 w-4 text-muted-foreground" /> : <Unlock className="h-4 w-4 text-green-600" />}
+                            {u.status === 'active' ? <Lock className="h-4 w-4 text-muted-foreground" /> : <Unlock className="h-4 w-4 text-primary" />}
                           </button>
                         )}
-                        {!isSelf && u.role === 'user' && (
+                        {canMod && u.role === 'user' && (
                           <button onClick={() => handleDelete(u)} className="p-1.5 rounded hover:bg-accent" title="Excluir">
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </button>
@@ -195,19 +194,17 @@ export default function AdminUsersPage() {
                 );
               })}
               {paginated.length === 0 && (
-                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">Nenhum usuário encontrado</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-muted-foreground">Nenhum usuário encontrado</td></tr>
               )}
             </tbody>
           </table>
         </div>
         {totalPages > 1 && (
           <div className="flex items-center justify-between p-4 border-t border-border">
-            <span className="text-xs text-muted-foreground">Página {page + 1} de {totalPages} ({filtered.length} usuários)</span>
+            <span className="text-xs text-muted-foreground">Página {page + 1} de {totalPages} ({filtered.length} registros)</span>
             <div className="flex gap-1">
-              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                className="p-1.5 rounded hover:bg-accent disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
-              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                className="p-1.5 rounded hover:bg-accent disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} className="p-1.5 rounded hover:bg-accent disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
+              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1} className="p-1.5 rounded hover:bg-accent disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
             </div>
           </div>
         )}

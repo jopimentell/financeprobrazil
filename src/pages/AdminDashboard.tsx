@@ -47,7 +47,7 @@ function MetricCard({ title, value, icon: Icon, subtitle, trend, format = 'numbe
 }
 
 export default function AdminDashboard() {
-  const { users, isAdmin, updateUserRole, toggleUserStatus, deleteUser } = useAuth();
+  const { users, isAdmin, toggleUserStatus, deleteUser } = useAuth();
   const { transactions } = useFinance();
   const [viewUser, setViewUser] = useState<User | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
@@ -125,8 +125,7 @@ export default function AdminDashboard() {
   }, [users, filterStatus]);
 
   const handleToggleAdmin = (u: User) => {
-    updateUserRole(u.id, u.role === 'admin' ? 'user' : 'admin');
-    toast.success(u.role === 'admin' ? 'Permissão de admin removida' : 'Usuário promovido a admin');
+    toast.error('Promoção de admin removida. Use /admin/admins/create.');
   };
 
   const handleToggleStatus = (u: User) => {
