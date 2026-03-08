@@ -209,8 +209,14 @@ export function ImportStatementModal({ open, onClose }: Props) {
 
       if (ext.endsWith('.ofx') || ext.endsWith('.qfx')) {
         parsed = parseOFX(text);
+        setDetectedBank('unknown');
       } else {
-        parsed = parseCSV(text);
+        const result = parseCSVSmart(text);
+        parsed = result.rows;
+        setDetectedBank(result.bank);
+        if (result.bank !== 'generic') {
+          toast.info(`Banco detectado: ${BANK_NAMES[result.bank]}`);
+        }
       }
 
       if (parsed.length === 0) {
