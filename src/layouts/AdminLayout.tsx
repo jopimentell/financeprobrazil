@@ -3,7 +3,7 @@ import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-d
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, Users, BarChart3, ShieldAlert, ChevronLeft,
-  LogOut, Menu, X, Shield, ScrollText, Settings, UserCheck
+  LogOut, Menu, X, Shield, ScrollText, Settings
 } from 'lucide-react';
 
 const adminNav = [
