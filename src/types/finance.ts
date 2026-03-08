@@ -138,4 +138,5 @@ export interface FinanceState {
   forecast: Forecast[];
   creditCards: CreditCard[];
   creditCardExpenses: CreditCardExpense[];
+  paidInvoices: PaidInvoice[];
 }
