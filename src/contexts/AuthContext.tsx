@@ -79,6 +79,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { localStorage.setItem(USERS_KEY, JSON.stringify(users)); }, [users]);
 
+  // Listen for admin creation events from AdminCreatePage
+  useEffect(() => {
+    const handler = () => {
+      try {
+        const stored = localStorage.getItem(USERS_KEY);
+        if (stored) setUsers(JSON.parse(stored));
+      } catch {}
+    };
+    window.addEventListener('admin-user-created', handler);
+    return () => window.removeEventListener('admin-user-created', handler);
+  }, []);
+
   const login = useCallback((email: string, password: string) => {
     const passwords = loadPasswords();
     if (passwords[email] !== password) return false;
