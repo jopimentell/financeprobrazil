@@ -117,6 +117,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { persist('debts', debts); }, [debts, persist]);
   useEffect(() => { persist('investments', investments); }, [investments, persist]);
   useEffect(() => { persist('forecast', forecast); }, [forecast, persist]);
+  useEffect(() => { persist('creditCards', creditCards); }, [creditCards, persist]);
+  useEffect(() => { persist('creditCardExpenses', creditCardExpenses); }, [creditCardExpenses, persist]);
 
   useEffect(() => {
     // System logs are saved through the service layer
