@@ -270,7 +270,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="p-0">
-        <DialogHeader>
+        <DialogHeader className="p-4 sm:p-6 border-b border-border shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
             {step === 'upload' && 'Importar Extrato'}
@@ -281,7 +281,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
         </DialogHeader>
 
         {/* Scrollable content area */}
-        <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6">
         {/* ─── Step 1: Upload ─── */}
         {step === 'upload' && (
           <div className="space-y-6 py-4">
