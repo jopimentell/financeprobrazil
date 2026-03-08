@@ -1,10 +1,12 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, CalendarDays, Tag, Wallet,
   CreditCard, TrendingUp, LineChart, FileBarChart, Target, Menu, X, ChevronLeft,
-  ArrowDownCircle, ArrowUpCircle, Crown
+  ArrowDownCircle, ArrowUpCircle, Crown, User, LogOut, Settings
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Separator } from '@/components/ui/separator';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
