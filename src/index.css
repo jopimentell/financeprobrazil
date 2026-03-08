@@ -63,7 +63,14 @@
     box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
   }
   .finance-metric {
-    @apply finance-card flex flex-col gap-2;
+    @apply finance-card flex flex-col gap-3 p-5 md:p-6 transition-all duration-200;
+  }
+  .finance-metric:hover {
+    @apply shadow-md;
+    transform: translateY(-1px);
+  }
+  .finance-metric:active {
+    transform: scale(0.98);
   }
   .finance-income {
     color: hsl(var(--finance-income));
