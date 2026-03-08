@@ -24,8 +24,6 @@ export default function AdminUserDetailPage() {
 
   const [demoteOpen, setDemoteOpen] = useState(false);
   const [demoteConfirmText, setDemoteConfirmText] = useState('');
-  const { addLog } = useAdminLogs();
-  const { requestImpersonation, pendingTarget } = useImpersonation();
 
   const targetUser = users.find(u => u.id === id);
 
