@@ -563,6 +563,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
             <Button onClick={handleClose} className="mt-4">Fechar</Button>
           </div>
         )}
+        </div>{/* end scrollable content */}
       </DialogContent>
     </Dialog>
   );
