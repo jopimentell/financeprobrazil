@@ -185,6 +185,44 @@ export default function Dashboard() {
             </div>
           </DashboardSortableCard>
         );
+      case 'credit-cards-summary':
+        if (!ccSummary || annualView || (ccSummary.openTotal === 0 && ccSummary.closedTotal === 0 && ccSummary.overdueTotal === 0 && ccSummary.futureTotal === 0)) return null;
+        return (
+          <DashboardSortableCard id="credit-cards-summary" key="credit-cards-summary" className="col-span-full">
+            <div className="finance-card">
+              <div className="flex items-center gap-2 mb-4">
+                <CreditCardIcon className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-muted-foreground">Cartões de Crédito</h3>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {ccSummary.openTotal > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Faturas Abertas</p>
+                    <p className="text-lg font-bold text-chart-4">R$ {ccSummary.openTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+                {ccSummary.closedTotal > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Aguardando Pagamento</p>
+                    <p className="text-lg font-bold text-accent-foreground">R$ {ccSummary.closedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+                {ccSummary.overdueTotal > 0 && (
+                  <div className="border border-destructive/50 rounded-lg p-3">
+                    <p className="text-xs text-destructive">Faturas Vencidas</p>
+                    <p className="text-lg font-bold text-destructive">R$ {ccSummary.overdueTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+                {ccSummary.futureTotal > 0 && (
+                  <div className="border border-border rounded-lg p-3">
+                    <p className="text-xs text-muted-foreground">Faturas Futuras</p>
+                    <p className="text-lg font-bold text-muted-foreground">R$ {ccSummary.futureTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </DashboardSortableCard>
+        );
       case 'forecast-installments':
         if (futureInstallments.length === 0 || annualView) return null;
         return (
