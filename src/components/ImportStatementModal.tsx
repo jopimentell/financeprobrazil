@@ -86,7 +86,7 @@ function parseOFX(text: string): ParsedRow[] {
 
     // OFX date format: YYYYMMDD or YYYYMMDDHHMMSS
     const date = `${dtPosted.slice(0, 4)}-${dtPosted.slice(4, 6)}-${dtPosted.slice(6, 8)}`;
-    const amount = parseFloat(trnAmt.replace(',', '.'));
+    const amount = parseBRNumber(trnAmt);
     if (isNaN(amount)) continue;
 
     const desc = name || 'Transação importada';
