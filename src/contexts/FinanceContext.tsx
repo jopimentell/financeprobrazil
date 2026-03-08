@@ -79,12 +79,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     loadedUserRef.current = currentUserId;
 
     if (isAdmin) {
-      setTransactions([]);
-      setCategories([]);
-      setAccounts([]);
-      setDebts([]);
-      setInvestments([]);
-      setForecast([]);
+      setTransactions([]); setCategories([]); setAccounts([]);
+      setDebts([]); setInvestments([]); setForecast([]);
+      setCreditCards([]); setCreditCardExpenses([]);
       return;
     }
 
