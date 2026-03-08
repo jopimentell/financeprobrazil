@@ -33,6 +33,7 @@ import AdminSecurityPage from "@/pages/admin/AdminSecurityPage";
 import AdminLogsPage from "@/pages/admin/AdminLogsPage";
 import AdminSettingsPage from "@/pages/admin/AdminSettingsPage";
 import AdminPlansPage from "@/pages/admin/AdminPlansPage";
+import AdminCreatePage from "@/pages/admin/AdminCreatePage";
 import AdminSubscriptionsPage from "@/pages/admin/AdminSubscriptionsPage";
 import PlansPage from "@/pages/Plans";
 import SubscriptionPage from "@/pages/Subscription";
@@ -81,6 +82,7 @@ const App = () => (
                     <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
                     <Route path="/admin/users" element={<AdminUsersPage />} />
                     <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
+                    <Route path="/admin/admins/create" element={<AdminCreatePage />} />
                     <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                     <Route path="/admin/security" element={<AdminSecurityPage />} />
                     <Route path="/admin/logs" element={<AdminLogsPage />} />

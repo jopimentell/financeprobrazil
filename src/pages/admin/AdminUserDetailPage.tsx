@@ -51,13 +51,22 @@ export default function AdminUserDetailPage() {
   }
 
   const handleBlock = () => {
+    if (targetUser.id === currentUser?.id) {
+      toast.error('Você não pode desativar sua própria conta.');
+      return;
+    }
     toggleUserStatus(targetUser.id);
     const action = targetUser.status === 'active' ? 'bloqueou' : 'desbloqueou';
-    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: `${action} usuário`, targetUserId: targetUser.id, targetUserName: targetUser.name });
-    toast.success(`Usuário ${targetUser.status === 'active' ? 'bloqueado' : 'desbloqueado'}`);
+    const label = targetUser.role === 'admin' ? 'admin' : 'usuário';
+    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: `${action} ${label}`, targetUserId: targetUser.id, targetUserName: targetUser.name });
+    toast.success(`${targetUser.role === 'admin' ? 'Admin' : 'Usuário'} ${targetUser.status === 'active' ? 'desativado' : 'reativado'}`);
   };
 
   const handleDelete = () => {
+    if (targetUser.id === currentUser?.id) {
+      toast.error('Você não pode excluir sua própria conta.');
+      return;
+    }
     deleteUser(targetUser.id);
     addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'excluiu usuário', targetUserId: targetUser.id, targetUserName: targetUser.name });
     toast.success('Usuário excluído');
@@ -85,24 +94,33 @@ export default function AdminUserDetailPage() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">{targetUser.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{targetUser.name}</h1>
+            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${targetUser.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-accent text-accent-foreground'}`}>
+              {targetUser.role === 'admin' ? 'Admin' : 'User'}
+            </span>
+          </div>
           <p className="text-muted-foreground text-sm">{targetUser.email}</p>
         </div>
         <div className="flex gap-2 flex-wrap">
-          {targetUser.role !== 'admin' && (
+          {targetUser.role === 'user' && (
             <button onClick={handleImpersonate}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors">
               <UserCheck className="h-4 w-4" /> Entrar como usuário
             </button>
           )}
-          <button onClick={handleBlock}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${targetUser.status === 'active' ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
-            {targetUser.status === 'active' ? <><Lock className="h-4 w-4" /> Bloquear</> : <><Unlock className="h-4 w-4" /> Desbloquear</>}
-          </button>
-          <button onClick={handleDelete}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity">
-            <Trash2 className="h-4 w-4" /> Excluir
-          </button>
+          {targetUser.id !== currentUser?.id && (
+            <button onClick={handleBlock}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${targetUser.status === 'active' ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
+              {targetUser.status === 'active' ? <><Lock className="h-4 w-4" /> {targetUser.role === 'admin' ? 'Desativar Admin' : 'Bloquear'}</> : <><Unlock className="h-4 w-4" /> Reativar</>}
+            </button>
+          )}
+          {targetUser.id !== currentUser?.id && targetUser.role === 'user' && (
+            <button onClick={handleDelete}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity">
+              <Trash2 className="h-4 w-4" /> Excluir
+            </button>
+          )}
         </div>
       </div>
 
