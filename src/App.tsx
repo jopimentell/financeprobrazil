@@ -38,6 +38,7 @@ import AdminCreatePage from "@/pages/admin/AdminCreatePage";
 import AdminSubscriptionsPage from "@/pages/admin/AdminSubscriptionsPage";
 import PlansPage from "@/pages/Plans";
 import SubscriptionPage from "@/pages/Subscription";
+import ProfilePage from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
