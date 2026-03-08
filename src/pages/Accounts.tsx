@@ -20,7 +20,7 @@ export default function Accounts() {
     e.preventDefault();
     if (!form.name) { toast.error('Nome é obrigatório'); return; }
     const data = { name: form.name, type: form.type, balance: parseFloat(form.balance) || 0 };
-    if (editing) { updateAccount({ ...data, id: editing.id }); toast.success('Conta atualizada'); }
+    if (editing) { updateAccount({ ...data, id: editing.id, userId: editing.userId }); toast.success('Conta atualizada'); }
     else { addAccount(data); toast.success('Conta criada'); }
     setModalOpen(false);
   };

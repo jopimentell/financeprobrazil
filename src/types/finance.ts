@@ -1,5 +1,6 @@
 export interface Transaction {
   id: string;
+  userId: string;
   description: string;
   amount: number;
   type: 'income' | 'expense';
@@ -14,6 +15,7 @@ export interface Transaction {
 
 export interface Category {
   id: string;
+  userId: string;
   name: string;
   type: 'income' | 'expense';
   color: string;
@@ -21,6 +23,7 @@ export interface Category {
 
 export interface Account {
   id: string;
+  userId: string;
   name: string;
   type: 'bank' | 'wallet' | 'credit_card';
   balance: number;
@@ -28,6 +31,7 @@ export interface Account {
 
 export interface Debt {
   id: string;
+  userId: string;
   creditor: string;
   totalAmount: number;
   remainingAmount: number;
@@ -39,6 +43,7 @@ export interface Debt {
 
 export interface Investment {
   id: string;
+  userId: string;
   name: string;
   type: 'stocks' | 'crypto' | 'fixed_income';
   investedAmount: number;
@@ -47,10 +52,32 @@ export interface Investment {
 }
 
 export interface Forecast {
+  userId: string;
   month: string;
   expectedIncome: number;
   expectedExpenses: number;
   projectedBalance: number;
+}
+
+export interface SystemLog {
+  id: string;
+  userId: string;
+  userName: string;
+  action: 'login' | 'logout' | 'register' | 'create_transaction' | 'delete_transaction' | 'update_transaction' | 'create_category' | 'delete_category' | 'create_account' | 'delete_account' | 'create_debt' | 'delete_debt' | 'create_investment' | 'delete_investment' | 'admin_action';
+  entity?: string;
+  entityId?: string;
+  details?: string;
+  timestamp: string;
+}
+
+export interface SystemSettings {
+  defaultCurrency: string;
+  defaultCategories: boolean;
+  maxTransactionsPerUser: number;
+  maxAccountsPerUser: number;
+  googleSheetsEnabled: boolean;
+  googleSheetsUrl: string;
+  maintenanceMode: boolean;
 }
 
 export interface FinanceState {

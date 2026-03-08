@@ -31,7 +31,7 @@ export default function Debts() {
       installments: parseInt(form.installments) || 1, paidInstallments: parseInt(form.paidInstallments) || 0,
       interestRate: parseFloat(form.interestRate) || 0, dueDate: form.dueDate,
     };
-    if (editing) { updateDebt({ ...data, id: editing.id }); toast.success('Dívida atualizada'); }
+    if (editing) { updateDebt({ ...data, id: editing.id, userId: editing.userId }); toast.success('Dívida atualizada'); }
     else { addDebt(data); toast.success('Dívida adicionada'); }
     setModalOpen(false);
   };
