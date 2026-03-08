@@ -8,30 +8,7 @@ import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
 import { parseCSVSmart, BANK_NAMES, ParsedRow, BankType, parseDate, isValidDate } from '@/utils/parsers';
 
-function parseDate(raw: string): string {
-  // Try common formats: DD/MM/YYYY, DD/MM, YYYY-MM-DD, DD-MM-YYYY
-  const trimmed = raw.trim();
-
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-
-  // DD/MM/YYYY or DD-MM-YYYY
-  const dmy = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (dmy) {
-    return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
-  }
-
-  // DD/MM (assume current year)
-  const dm = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
-  if (dm) {
-    const year = new Date().getFullYear();
-    return `${year}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`;
-  }
-
-  return trimmed;
-}
-
-// parseCSV is now handled by src/utils/parsers/
+import { parseBRNumber } from '@/utils/parsers/numberUtils';
 
 function parsePastedText(text: string): ParsedRow[] {
   const lines = text.trim().split('\n').filter(l => l.trim());
