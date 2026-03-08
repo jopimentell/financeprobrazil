@@ -63,6 +63,10 @@ export default function AdminUserDetailPage() {
   };
 
   const handleDelete = () => {
+    if (targetUser.id === currentUser?.id) {
+      toast.error('Você não pode excluir sua própria conta.');
+      return;
+    }
     deleteUser(targetUser.id);
     addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'excluiu usuário', targetUserId: targetUser.id, targetUserName: targetUser.name });
     toast.success('Usuário excluído');
