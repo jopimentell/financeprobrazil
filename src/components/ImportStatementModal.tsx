@@ -31,45 +31,7 @@ function parseDate(raw: string): string {
   return trimmed;
 }
 
-function parseCSV(text: string): ParsedRow[] {
-  const lines = text.trim().split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-
-  const header = lines[0].toLowerCase();
-  const hasHeader = header.includes('data') || header.includes('date') || header.includes('descri');
-  const dataLines = hasHeader ? lines.slice(1) : lines;
-
-  // Detect separator
-  const sep = lines[0].includes(';') ? ';' : ',';
-
-  return dataLines.map(line => {
-    const parts = line.split(sep).map(p => p.trim().replace(/^"|"$/g, ''));
-    if (parts.length < 3) return null;
-
-    const date = parseDate(parts[0]);
-    const description = parts[1];
-    const rawAmount = parts[2].replace(/[R$\s]/g, '').replace(',', '.');
-    const amount = parseFloat(rawAmount);
-    if (isNaN(amount)) return null;
-
-    const detected = detectTransactionType(description, amount);
-    const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
-    const absAmount = Math.abs(amount);
-    const suggested = suggestCategory(description);
-
-    return {
-      date,
-      description,
-      amount: absAmount,
-      type,
-      categoryId: '',
-      suggestedCategory: suggested,
-      selected: true,
-      isDuplicate: false,
-      typeConfirmed: detected !== 'unknown',
-    };
-  }).filter(Boolean) as ParsedRow[];
-}
+// parseCSV is now handled by src/utils/parsers/
 
 function parsePastedText(text: string): ParsedRow[] {
   const lines = text.trim().split('\n').filter(l => l.trim());
