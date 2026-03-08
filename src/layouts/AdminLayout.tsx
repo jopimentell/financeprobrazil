@@ -21,6 +21,7 @@ const allAdminNav: NavItem[] = [
   { path: '/admin/analytics', label: 'Analytics', icon: BarChart3, permission: 'view_analytics' },
   { path: '/admin/security', label: 'Segurança', icon: ShieldAlert, permission: 'view_security' },
   { path: '/admin/logs', label: 'Logs', icon: ScrollText, permission: 'view_logs' },
+  { path: '/admin/restore-owner', label: 'Restaurar Owner', icon: Shield, permission: 'restore_owner' },
   { path: '/admin/settings', label: 'Configurações', icon: Settings, permission: 'manage_settings' },
 ];
 

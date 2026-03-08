@@ -1,11 +1,11 @@
 import { useState, useMemo } from 'react';
-import { useAuth, User, canModifyUser, canImpersonate, hasPermission, ROLE_LABELS, ROLE_COLORS, UserRole } from '@/contexts/AuthContext';
+import { useAuth, User, canModifyUser, canImpersonate, hasPermission, ROLE_LABELS, ROLE_COLORS, UserRole, isLastOwner } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import ImpersonationModal from '@/components/ImpersonationModal';
 import { useNavigate, Link } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Lock, Unlock, Trash2, Eye, ArrowUpDown, UserCheck, Shield, UserPlus } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Lock, Unlock, Trash2, Eye, ArrowUpDown, UserCheck, Shield, UserPlus, ArrowDownToLine } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SortKey = 'name' | 'createdAt' | 'transactions';
@@ -14,7 +14,7 @@ type RoleFilter = 'all' | UserRole;
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export default function AdminUsersPage() {
-  const { users, realUser, toggleUserStatus, deleteUser } = useAuth();
+  const { users, realUser, toggleUserStatus, deleteUser, changeUserRole } = useAuth();
   const { getUserTransactions } = useFinance();
   const { addLog } = useAdminLogs();
   const { requestImpersonation, pendingTarget } = useImpersonation();
@@ -61,6 +61,7 @@ export default function AdminUsersPage() {
 
   const handleBlock = (u: User) => {
     if (!currentUser) return;
+    if (u.isProtectedOwner) { toast.error('Este usuário é o Owner protegido do sistema e não pode ser alterado.'); return; }
     const check = canModifyUser(currentUser, u);
     if (!check.allowed) { toast.error(check.error); return; }
     toggleUserStatus(u.id);
@@ -71,11 +72,27 @@ export default function AdminUsersPage() {
 
   const handleDelete = (u: User) => {
     if (!currentUser) return;
+    if (u.isProtectedOwner) { toast.error('Este usuário é o Owner protegido do sistema e não pode ser removido.'); return; }
+    if (u.role === 'owner' && isLastOwner(users, u.id)) { toast.error('Não é possível excluir o último Owner do sistema.'); return; }
     const check = canModifyUser(currentUser, u);
     if (!check.allowed) { toast.error(check.error); return; }
-    deleteUser(u.id);
+    const success = deleteUser(u.id);
+    if (!success) { toast.error('Não foi possível excluir o usuário.'); return; }
     addLog({ adminId: currentUser.id, adminName: currentUser.name, action: `excluiu ${ROLE_LABELS[u.role]}`, targetUserId: u.id, targetUserName: u.name });
     toast.success('Usuário excluído');
+  };
+
+  const handleDemote = (u: User) => {
+    if (!currentUser) return;
+    if (u.isProtectedOwner) { toast.error('Este usuário é o Owner protegido do sistema e não pode ser alterado.'); return; }
+    if (u.role === 'owner' && isLastOwner(users, u.id)) { toast.error('Não é possível rebaixar o último Owner do sistema.'); return; }
+    const check = canModifyUser(currentUser, u);
+    if (!check.allowed) { toast.error(check.error); return; }
+    const oldRole = u.role;
+    const success = changeUserRole(u.id, 'user');
+    if (!success) { toast.error('Não foi possível rebaixar o usuário.'); return; }
+    addLog({ adminId: currentUser.id, adminName: currentUser.name, action: `rebaixou ${ROLE_LABELS[oldRole]} para User`, targetUserId: u.id, targetUserName: u.name });
+    toast.success(`${u.name} rebaixado para User`);
   };
 
   const handleImpersonate = (u: User) => {
@@ -89,6 +106,7 @@ export default function AdminUsersPage() {
 
   const canCreate = hasPermission(myRole, 'create_staff');
   const canBlock = hasPermission(myRole, 'block_users');
+  const canDemote = hasPermission(myRole, 'demote_users');
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -145,6 +163,7 @@ export default function AdminUsersPage() {
                 const isSelf = u.id === currentUser?.id;
                 const canMod = currentUser ? canModifyUser(currentUser, u).allowed : false;
                 const canImp = currentUser ? canImpersonate(currentUser, u) : false;
+                const isDemotable = canDemote && canMod && (u.role === 'support' || u.role === 'admin' || (u.role === 'owner' && !u.isProtectedOwner && !isLastOwner(users, u.id)));
 
                 return (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-accent/30 transition-colors">
@@ -152,6 +171,7 @@ export default function AdminUsersPage() {
                       <div className="flex items-center gap-2">
                         {u.name}
                         {isSelf && <span className="text-xs text-muted-foreground">(você)</span>}
+                        {u.isProtectedOwner && <span title="Owner protegido"><Shield className="h-3.5 w-3.5 text-destructive" /></span>}
                       </div>
                     </td>
                     <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{u.email}</td>
@@ -181,6 +201,11 @@ export default function AdminUsersPage() {
                         {canBlock && canMod && (
                           <button onClick={() => handleBlock(u)} className="p-1.5 rounded hover:bg-accent" title={u.status === 'active' ? 'Desativar' : 'Reativar'}>
                             {u.status === 'active' ? <Lock className="h-4 w-4 text-muted-foreground" /> : <Unlock className="h-4 w-4 text-primary" />}
+                          </button>
+                        )}
+                        {isDemotable && (
+                          <button onClick={() => handleDemote(u)} className="p-1.5 rounded hover:bg-accent" title="Rebaixar para User">
+                            <ArrowDownToLine className="h-4 w-4 text-amber-600" />
                           </button>
                         )}
                         {canMod && u.role === 'user' && (

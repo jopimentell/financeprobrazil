@@ -35,6 +35,8 @@ import AdminSettingsPage from "@/pages/admin/AdminSettingsPage";
 import AdminPlansPage from "@/pages/admin/AdminPlansPage";
 import AdminCreatePage from "@/pages/admin/AdminCreatePage";
 import AdminSubscriptionsPage from "@/pages/admin/AdminSubscriptionsPage";
+import AdminEmergencyAccessPage from "@/pages/admin/AdminEmergencyAccessPage";
+import AdminRestoreOwnerPage from "@/pages/admin/AdminRestoreOwnerPage";
 import PlansPage from "@/pages/Plans";
 import SubscriptionPage from "@/pages/Subscription";
 import NotFound from "@/pages/NotFound";
@@ -89,7 +91,10 @@ const App = () => (
                     <Route path="/admin/settings" element={<AdminSettingsPage />} />
                     <Route path="/admin/plans" element={<AdminPlansPage />} />
                     <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
+                    <Route path="/admin/restore-owner" element={<AdminRestoreOwnerPage />} />
                   </Route>
+                  {/* Emergency access - standalone page outside admin layout */}
+                  <Route path="/admin/emergency-access" element={<AdminEmergencyAccessPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

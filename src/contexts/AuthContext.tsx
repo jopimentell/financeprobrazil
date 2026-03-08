@@ -12,11 +12,11 @@ export interface User {
   status: 'active' | 'inactive';
   currency?: string;
   closingDay?: number;
+  isProtectedOwner?: boolean;
 }
 
 // ============ RBAC Helpers ============
 
-/** Role hierarchy: higher number = more power */
 const ROLE_LEVEL: Record<UserRole, number> = { user: 0, support: 1, admin: 2, owner: 3 };
 
 export function getRoleLevel(role: UserRole): number { return ROLE_LEVEL[role]; }
@@ -40,7 +40,9 @@ export const ROLE_COLORS: Record<UserRole, string> = {
 /** Check if actor can modify target */
 export function canModifyUser(actor: User, target: User): { allowed: boolean; error?: string } {
   if (actor.id === target.id) return { allowed: false, error: 'Você não pode modificar sua própria conta administrativa.' };
-  
+
+  if (target.isProtectedOwner) return { allowed: false, error: 'Este usuário é o Owner protegido do sistema e não pode ser alterado.' };
+
   if (actor.role === 'support') return { allowed: false, error: 'Support não possui permissão para alterar usuários.' };
 
   if (actor.role === 'admin') {
@@ -50,7 +52,6 @@ export function canModifyUser(actor: User, target: User): { allowed: boolean; er
     return { allowed: true };
   }
 
-  // Owner can modify everyone except themselves (already checked)
   if (actor.role === 'owner') return { allowed: true };
 
   return { allowed: false, error: 'Permissão insuficiente.' };
@@ -60,7 +61,7 @@ export function canModifyUser(actor: User, target: User): { allowed: boolean; er
 export function canImpersonate(actor: User, target: User): boolean {
   if (actor.id === target.id) return false;
   if (target.role === 'owner') return false;
-  if (actor.role === 'owner') return true; // all non-owners (already filtered above)
+  if (actor.role === 'owner') return true;
   if (actor.role === 'admin') return target.role === 'user' || target.role === 'support';
   if (actor.role === 'support') return target.role === 'user';
   return false;
@@ -78,17 +79,28 @@ export type Permission =
   | 'view_users' | 'block_users' | 'delete_users'
   | 'create_staff' | 'manage_plans' | 'manage_subscriptions'
   | 'view_analytics' | 'view_security' | 'view_logs'
-  | 'manage_settings' | 'impersonate';
+  | 'manage_settings' | 'impersonate' | 'demote_users' | 'restore_owner';
 
 const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   user: [],
   support: ['view_users', 'impersonate'],
   admin: ['view_users', 'block_users', 'delete_users', 'view_analytics', 'view_security', 'view_logs', 'impersonate'],
-  owner: ['view_users', 'block_users', 'delete_users', 'create_staff', 'manage_plans', 'manage_subscriptions', 'view_analytics', 'view_security', 'view_logs', 'manage_settings', 'impersonate'],
+  owner: ['view_users', 'block_users', 'delete_users', 'create_staff', 'manage_plans', 'manage_subscriptions', 'view_analytics', 'view_security', 'view_logs', 'manage_settings', 'impersonate', 'demote_users', 'restore_owner'],
 };
 
 export function hasPermission(role: UserRole, permission: Permission): boolean {
   return ROLE_PERMISSIONS[role]?.includes(permission) ?? false;
+}
+
+/** Check if this is the last owner in the system */
+export function isLastOwner(users: User[], userId: string): boolean {
+  const owners = users.filter(u => u.role === 'owner' && u.status === 'active');
+  return owners.length === 1 && owners[0].id === userId;
+}
+
+/** Check if any active owner exists */
+export function hasActiveOwner(users: User[]): boolean {
+  return users.some(u => u.role === 'owner' && u.status === 'active');
 }
 
 // ============ Context ============
@@ -103,9 +115,11 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => boolean;
   logout: () => void;
   toggleUserStatus: (userId: string) => void;
-  deleteUser: (userId: string) => void;
+  deleteUser: (userId: string) => boolean;
+  changeUserRole: (userId: string, newRole: UserRole) => boolean;
   startImpersonation: (userId: string) => void;
   stopImpersonation: () => void;
+  refreshUsers: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -119,7 +133,6 @@ function loadUsers(): User[] {
     const stored = localStorage.getItem(USERS_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      // Migrate old roles: ensure valid role values
       return parsed.map((u: any) => ({
         ...u,
         role: ['user', 'support', 'admin', 'owner'].includes(u.role) ? u.role : 'user',
@@ -176,6 +189,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('admin-user-created', handler);
   }, []);
 
+  const refreshUsers = useCallback(() => {
+    try {
+      const stored = localStorage.getItem(USERS_KEY);
+      if (stored) setUsers(JSON.parse(stored));
+    } catch {}
+  }, []);
+
   const login = useCallback((email: string, password: string) => {
     const passwords = loadPasswords();
     if (passwords[email] !== password) return false;
@@ -216,9 +236,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
   }, []);
 
-  const deleteUser = useCallback((userId: string) => {
+  const deleteUser = useCallback((userId: string): boolean => {
+    const target = users.find(u => u.id === userId);
+    if (!target) return false;
+    if (target.isProtectedOwner) return false;
+    if (target.role === 'owner' && isLastOwner(users, userId)) return false;
     setUsers(prev => prev.filter(u => u.id !== userId));
-  }, []);
+    return true;
+  }, [users]);
+
+  const changeUserRole = useCallback((userId: string, newRole: UserRole): boolean => {
+    const target = users.find(u => u.id === userId);
+    if (!target) return false;
+    if (target.isProtectedOwner) return false;
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    return true;
+  }, [users]);
 
   const startImpersonation = useCallback((userId: string) => {
     const target = users.find(u => u.id === userId);
@@ -236,8 +269,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user, realUser: realUserState, users, isAdmin,
       impersonating,
       login, register, logout,
-      toggleUserStatus, deleteUser,
-      startImpersonation, stopImpersonation,
+      toggleUserStatus, deleteUser, changeUserRole,
+      startImpersonation, stopImpersonation, refreshUsers,
     }}>
       {children}
     </AuthContext.Provider>
