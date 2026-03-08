@@ -60,9 +60,9 @@ export function TransactionModal({ open, onClose, transaction, defaultType }: Tr
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-6">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 lg:p-6">
       <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card rounded-t-2xl sm:rounded-xl shadow-lg w-full sm:max-w-[min(80vw,32rem)] h-[95vh] sm:h-auto sm:max-h-[80vh] flex flex-col animate-fade-in">
+      <div className="relative bg-card rounded-t-2xl sm:rounded-xl shadow-lg w-[95vw] h-[90vh] sm:w-[90vw] sm:max-w-[700px] sm:h-auto sm:max-h-[85vh] lg:w-[80vw] lg:max-w-[1100px] flex flex-col animate-fade-in overflow-hidden">
         {/* Header */}
         <div className="flex justify-between items-center p-4 sm:p-6 border-b border-border shrink-0">
           <h2 className="text-lg font-bold">{isEdit ? 'Editar Transação' : 'Nova Transação'}</h2>

@@ -38,9 +38,9 @@ export default function ImpersonationModal({ onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-2 sm:p-4 lg:p-6">
       <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" onClick={cancelRequest} />
-      <div className="relative bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-[min(80vw,28rem)] max-h-[95vh] sm:max-h-[80vh] flex flex-col animate-fade-in overflow-hidden">
+      <div className="relative bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl w-[95vw] h-[90vh] sm:w-[90vw] sm:max-w-[700px] sm:h-auto sm:max-h-[85vh] lg:w-[80vw] lg:max-w-[1100px] flex flex-col animate-fade-in overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div className="flex items-center gap-3">
