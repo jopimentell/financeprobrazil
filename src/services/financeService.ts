@@ -4,7 +4,7 @@
  * When migrating to a real backend, replace these with API calls.
  */
 
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense } from '@/types/finance';
 import * as db from '@/database/localDatabase';
 
 const uid = () => crypto.randomUUID();
@@ -213,6 +213,119 @@ export function getResumoFinanceiro(userId: string, year: number, month: number)
   const income = txs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const expenses = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   return { income, expenses, balance: income - expenses, transactions: txs };
+}
+
+// ── Credit Cards ───────────────────────────────────────
+
+export function getCreditCards(userId: string): CreditCard[] {
+  return db.getUserData(userId).creditCards || [];
+}
+
+export function addCreditCard(userId: string, c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>): CreditCard {
+  const newCard: CreditCard = { ...c, id: uid(), userId, createdAt: new Date().toISOString().split('T')[0] };
+  db.updateUserEntity(userId, 'creditCards', prev => [...(prev || []), newCard]);
+  return newCard;
+}
+
+export function updateCreditCard(userId: string, c: CreditCard): void {
+  db.updateUserEntity(userId, 'creditCards', prev => (prev || []).map(x => x.id === c.id ? c : x));
+}
+
+export function deleteCreditCard(userId: string, id: string): void {
+  db.updateUserEntity(userId, 'creditCards', prev => (prev || []).filter(x => x.id !== id));
+  db.updateUserEntity(userId, 'creditCardExpenses', prev => (prev || []).filter(x => x.cardId !== id));
+}
+
+// ── Credit Card Expenses ──────────────────────────────
+
+export function getCreditCardExpenses(userId: string): CreditCardExpense[] {
+  return db.getUserData(userId).creditCardExpenses || [];
+}
+
+export function getCreditCardExpensesByCard(userId: string, cardId: string): CreditCardExpense[] {
+  return getCreditCardExpenses(userId).filter(e => e.cardId === cardId);
+}
+
+export function addCreditCardExpense(
+  userId: string,
+  e: Omit<CreditCardExpense, 'id' | 'userId'>,
+): CreditCardExpense[] {
+  const numInstallments = e.installments || 1;
+  const installmentAmount = Math.round((e.amount / numInstallments) * 100) / 100;
+  const parentId = uid();
+  const startDate = new Date(e.purchaseDate);
+  const generated: CreditCardExpense[] = [];
+
+  for (let i = 0; i < numInstallments; i++) {
+    const txDate = new Date(startDate);
+    txDate.setMonth(txDate.getMonth() + i);
+    const exp: CreditCardExpense = {
+      id: i === 0 ? parentId : uid(),
+      userId,
+      cardId: e.cardId,
+      description: numInstallments > 1 ? `${e.description} (${i + 1}/${numInstallments})` : e.description,
+      amount: installmentAmount,
+      category: e.category,
+      purchaseDate: txDate.toISOString().split('T')[0],
+      currentInstallment: i + 1,
+      totalInstallments: numInstallments,
+      parentExpenseId: i === 0 ? undefined : parentId,
+    };
+    generated.push(exp);
+  }
+
+  db.updateUserEntity(userId, 'creditCardExpenses', prev => [...(prev || []), ...generated]);
+  return generated;
+}
+
+export function deleteCreditCardExpense(userId: string, id: string): void {
+  const expenses = getCreditCardExpenses(userId);
+  const expense = expenses.find(e => e.id === id);
+  if (!expense) return;
+  // Delete all related installments
+  const parentId = expense.parentExpenseId || expense.id;
+  db.updateUserEntity(userId, 'creditCardExpenses', prev =>
+    (prev || []).filter(e => e.id !== parentId && e.parentExpenseId !== parentId)
+  );
+}
+
+/**
+ * Compute invoices for a credit card based on its expenses and closing day.
+ */
+export function computeInvoices(card: CreditCard, expenses: CreditCardExpense[]): import('@/types/finance').CreditCardInvoice[] {
+  const now = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  // Group expenses into invoice months based on closing day
+  const grouped: Record<string, CreditCardExpense[]> = {};
+  expenses.forEach(exp => {
+    const d = new Date(exp.purchaseDate);
+    let invoiceMonth: Date;
+    if (d.getDate() > card.closingDay) {
+      invoiceMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    } else {
+      invoiceMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+    }
+    const key = `${invoiceMonth.getFullYear()}-${String(invoiceMonth.getMonth() + 1).padStart(2, '0')}`;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(exp);
+  });
+
+  return Object.entries(grouped)
+    .map(([month, exps]) => {
+      let status: 'open' | 'closed' | 'paid' | 'future';
+      if (month < currentKey) status = 'closed';
+      else if (month === currentKey) status = 'open';
+      else status = 'future';
+      return {
+        cardId: card.id,
+        month,
+        total: exps.reduce((s, e) => s + e.amount, 0),
+        status,
+        expenses: exps.sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate)),
+      };
+    })
+    .sort((a, b) => a.month.localeCompare(b.month));
 }
 
 // ── Export / Import ────────────────────────────────────

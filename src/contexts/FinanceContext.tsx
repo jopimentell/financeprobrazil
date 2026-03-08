@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import * as db from '@/database/localDatabase';
 import * as financeService from '@/services/financeService';
@@ -11,6 +11,8 @@ interface FinanceContextType {
   debts: Debt[];
   investments: Investment[];
   forecast: Forecast[];
+  creditCards: CreditCard[];
+  creditCardExpenses: CreditCardExpense[];
   allTransactions: Transaction[];
   allCategories: Category[];
   allAccounts: Account[];
@@ -32,6 +34,10 @@ interface FinanceContextType {
   updateInvestment: (i: Investment) => void;
   deleteInvestment: (id: string) => void;
   updateForecast: (f: Forecast[]) => void;
+  addCreditCard: (c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => void;
+  deleteCreditCard: (id: string) => void;
+  addCreditCardExpense: (e: Omit<CreditCardExpense, 'id' | 'userId'>) => void;
+  deleteCreditCardExpense: (e: Omit<CreditCardExpense, 'id' | 'userId'>) => void;
   syncToSheet: () => void;
   getMonthTransactions: (year: number, month: number) => Transaction[];
   getYearTransactions: (year: number) => Transaction[];
@@ -61,6 +67,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [forecast, setForecast] = useState<Forecast[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [creditCardExpenses, setCreditCardExpenses] = useState<CreditCardExpense[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => financeService.getSystemLogs());
 
   const loadedUserRef = useRef<string>('');
@@ -71,12 +79,9 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     loadedUserRef.current = currentUserId;
 
     if (isAdmin) {
-      setTransactions([]);
-      setCategories([]);
-      setAccounts([]);
-      setDebts([]);
-      setInvestments([]);
-      setForecast([]);
+      setTransactions([]); setCategories([]); setAccounts([]);
+      setDebts([]); setInvestments([]); setForecast([]);
+      setCreditCards([]); setCreditCardExpenses([]);
       return;
     }
 
@@ -87,6 +92,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setDebts(data.debts);
     setInvestments(data.investments);
     setForecast(data.forecast);
+    setCreditCards(data.creditCards || []);
+    setCreditCardExpenses(data.creditCardExpenses || []);
   }, [currentUserId, isAdmin]);
 
   // Reset loaded ref on logout
@@ -110,6 +117,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { persist('debts', debts); }, [debts, persist]);
   useEffect(() => { persist('investments', investments); }, [investments, persist]);
   useEffect(() => { persist('forecast', forecast); }, [forecast, persist]);
+  useEffect(() => { persist('creditCards', creditCards); }, [creditCards, persist]);
+  useEffect(() => { persist('creditCardExpenses', creditCardExpenses); }, [creditCardExpenses, persist]);
 
   useEffect(() => {
     // System logs are saved through the service layer
@@ -264,16 +273,48 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const getUserDebts = useCallback((userId: string) => financeService.getDebts(userId), []);
   const getUserInvestments = useCallback((userId: string) => financeService.getInvestments(userId), []);
 
+  // Credit card operations
+  const addCreditCardFn = useCallback((c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => {
+    const newCard = financeService.addCreditCard(currentUserId, c);
+    setCreditCards(prev => [...prev, newCard]);
+  }, [currentUserId]);
+
+  const deleteCreditCardFn = useCallback((id: string) => {
+    financeService.deleteCreditCard(currentUserId, id);
+    setCreditCards(prev => prev.filter(x => x.id !== id));
+    setCreditCardExpenses(prev => prev.filter(x => x.cardId !== id));
+  }, [currentUserId]);
+
+  const addCreditCardExpenseFn = useCallback((e: Omit<CreditCardExpense, 'id' | 'userId'>) => {
+    const generated = financeService.addCreditCardExpense(currentUserId, e);
+    setCreditCardExpenses(prev => [...prev, ...generated]);
+  }, [currentUserId]);
+
+  const deleteCreditCardExpenseFn = useCallback((e: Omit<CreditCardExpense, 'id' | 'userId'>) => {
+    // Find the actual expense by matching fields
+    const all = financeService.getCreditCardExpenses(currentUserId);
+    const found = all.find(x => x.cardId === e.cardId && x.description === e.description && x.purchaseDate === e.purchaseDate);
+    if (found) {
+      financeService.deleteCreditCardExpense(currentUserId, found.id);
+      const updated = financeService.getCreditCardExpenses(currentUserId);
+      setCreditCardExpenses(updated);
+    }
+  }, [currentUserId]);
+
   return (
     <FinanceContext.Provider value={{
       transactions, categories, accounts, debts, investments, forecast,
+      creditCards, creditCardExpenses,
       allTransactions, allCategories, allAccounts, allDebts, allInvestments,
       addTransaction, updateTransaction, deleteTransaction,
       addCategory, updateCategory, deleteCategory,
       addAccount, updateAccount, deleteAccount,
       addDebt, updateDebt, deleteDebt,
       addInvestment, updateInvestment, deleteInvestment,
-      updateForecast: updateForecastFn, syncToSheet,
+      updateForecast: updateForecastFn,
+      addCreditCard: addCreditCardFn, deleteCreditCard: deleteCreditCardFn,
+      addCreditCardExpense: addCreditCardExpenseFn, deleteCreditCardExpense: deleteCreditCardExpenseFn,
+      syncToSheet,
       getMonthTransactions, getYearTransactions,
       getCategoryName, getAccountName, getCategoryColor,
       getUserTransactions, getUserCategories, getUserAccounts, getUserDebts, getUserInvestments,

@@ -20,6 +20,7 @@ import Despesas from "@/pages/Despesas";
 import Categories from "@/pages/Categories";
 import Accounts from "@/pages/Accounts";
 import Debts from "@/pages/Debts";
+import CreditCardsPage from "@/pages/CreditCards";
 import Investments from "@/pages/Investments";
 import ForecastPage from "@/pages/Forecast";
 import Reports from "@/pages/Reports";
@@ -70,6 +71,7 @@ const App = () => (
                     <Route path="/categorias" element={<Categories />} />
                     <Route path="/contas" element={<Accounts />} />
                     <Route path="/dividas" element={<Debts />} />
+                    <Route path="/cartoes" element={<CreditCardsPage />} />
                     <Route path="/investimentos" element={<Investments />} />
                     <Route path="/projecao" element={<ForecastPage />} />
                     <Route path="/relatorios" element={<Reports />} />

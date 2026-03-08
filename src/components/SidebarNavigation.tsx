@@ -13,6 +13,7 @@ const navItems = [
   { path: '/despesas', label: 'Despesas', icon: ArrowUpCircle },
   { path: '/categorias', label: 'Categorias', icon: Tag },
   { path: '/contas', label: 'Contas', icon: Wallet },
+  { path: '/cartoes', label: 'Cartões', icon: CreditCard },
   { path: '/dividas', label: 'Dívidas', icon: CreditCard },
   { path: '/investimentos', label: 'Investimentos', icon: TrendingUp },
   { path: '/planejamento', label: 'Planejamento', icon: Target },
