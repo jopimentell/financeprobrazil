@@ -136,7 +136,7 @@ export function ensureUserData(userId: string): UserFinanceData {
 
 export function getUserData(userId: string): UserFinanceData {
   const db = loadDatabase();
-  return db.userData[userId] || { transactions: [], categories: [], accounts: [], debts: [], investments: [], forecast: [] };
+  return db.userData[userId] || { transactions: [], categories: [], accounts: [], debts: [], investments: [], forecast: [], creditCards: [], creditCardExpenses: [] };
 }
 
 export function setUserData(userId: string, data: UserFinanceData): void {
