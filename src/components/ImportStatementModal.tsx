@@ -5,6 +5,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { Transaction } from '@/types/finance';
 import { Upload, FileText, ClipboardPaste, CheckCircle2, AlertTriangle, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
+import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
 
 interface ParsedRow {
   date: string;
@@ -15,26 +16,7 @@ interface ParsedRow {
   suggestedCategory: string;
   selected: boolean;
   isDuplicate: boolean;
-}
-
-const CATEGORY_KEYWORDS: Record<string, string[]> = {
-  'Alimentação': ['supermercado', 'mercado', 'padaria', 'restaurante', 'ifood', 'rappi', 'burger', 'pizza', 'lanche', 'açougue'],
-  'Transporte': ['uber', '99', 'cabify', 'combustível', 'gasolina', 'estacionamento', 'pedágio', 'ônibus', 'metrô'],
-  'Assinaturas': ['netflix', 'spotify', 'disney', 'hbo', 'amazon prime', 'youtube', 'apple', 'google one', 'deezer'],
-  'Saúde': ['farmácia', 'drogaria', 'hospital', 'clínica', 'médico', 'dentista', 'plano de saúde', 'unimed'],
-  'Educação': ['escola', 'faculdade', 'curso', 'udemy', 'alura', 'livro'],
-  'Moradia': ['aluguel', 'condomínio', 'luz', 'energia', 'água', 'gás', 'internet', 'telefone'],
-  'Lazer': ['cinema', 'teatro', 'show', 'ingresso', 'viagem', 'hotel', 'bar'],
-  'Salário': ['salário', 'salario', 'pagamento', 'vencimento', 'remuneração'],
-  'Freelance': ['freelance', 'serviço prestado', 'consultoria', 'projeto'],
-};
-
-function suggestCategory(description: string): string {
-  const lower = description.toLowerCase();
-  for (const [cat, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
-    if (keywords.some(kw => lower.includes(kw))) return cat;
-  }
-  return 'Outros';
+  typeConfirmed: boolean;
 }
 
 function parseDate(raw: string): string {
@@ -81,7 +63,8 @@ function parseCSV(text: string): ParsedRow[] {
     const amount = parseFloat(rawAmount);
     if (isNaN(amount)) return null;
 
-    const type: 'income' | 'expense' = amount >= 0 ? 'income' : 'expense';
+    const detected = detectTransactionType(description, amount);
+    const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
     const absAmount = Math.abs(amount);
     const suggested = suggestCategory(description);
 
@@ -94,6 +77,7 @@ function parseCSV(text: string): ParsedRow[] {
       suggestedCategory: suggested,
       selected: true,
       isDuplicate: false,
+      typeConfirmed: detected !== 'unknown',
     };
   }).filter(Boolean) as ParsedRow[];
 }
@@ -111,7 +95,8 @@ function parsePastedText(text: string): ParsedRow[] {
       const amount = parseFloat(rawAmount);
       if (isNaN(amount)) return null;
 
-      const type: 'income' | 'expense' = amount >= 0 ? 'income' : 'expense';
+      const detected = detectTransactionType(description, amount);
+      const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
       const suggested = suggestCategory(description);
 
       return {
@@ -123,6 +108,7 @@ function parsePastedText(text: string): ParsedRow[] {
         suggestedCategory: suggested,
         selected: true,
         isDuplicate: false,
+        typeConfirmed: detected !== 'unknown',
       };
     }
 
@@ -135,7 +121,8 @@ function parsePastedText(text: string): ParsedRow[] {
       const amount = parseFloat(rawAmount);
       if (isNaN(amount)) return null;
 
-      const type: 'income' | 'expense' = amount >= 0 ? 'income' : 'expense';
+      const detected = detectTransactionType(description, amount);
+      const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
       return {
         date,
         description,
@@ -145,6 +132,7 @@ function parsePastedText(text: string): ParsedRow[] {
         suggestedCategory: suggestCategory(description),
         selected: true,
         isDuplicate: false,
+        typeConfirmed: detected !== 'unknown',
       };
     }
 
@@ -173,15 +161,19 @@ function parseOFX(text: string): ParsedRow[] {
     const amount = parseFloat(trnAmt.replace(',', '.'));
     if (isNaN(amount)) continue;
 
+    const desc = name || 'Transação importada';
+    const detected = detectTransactionType(desc, amount);
+    const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
     rows.push({
       date,
-      description: name || 'Transação importada',
+      description: desc,
       amount: Math.abs(amount),
-      type: amount >= 0 ? 'income' : 'expense',
+      type,
       categoryId: '',
-      suggestedCategory: suggestCategory(name),
+      suggestedCategory: suggestCategory(desc),
       selected: true,
       isDuplicate: false,
+      typeConfirmed: detected !== 'unknown',
     });
   }
 
@@ -322,6 +314,11 @@ export function ImportStatementModal({ open, onClose }: Props) {
     let imported = 0;
 
     for (const row of selectedRows) {
+      // Learn from user choices
+      learnType(row.description, row.type);
+      const catName = categories.find(c => c.id === row.categoryId)?.name;
+      if (catName) learnCategory(row.description, catName);
+
       addTransaction({
         description: row.description,
         amount: row.amount,
@@ -465,14 +462,19 @@ export function ImportStatementModal({ open, onClose }: Props) {
                         {row.type === 'income' ? '+' : '-'}R$ {row.amount.toFixed(2)}
                       </td>
                       <td className="p-2">
-                        <select
-                          value={row.type}
-                          onChange={e => updateRow(i, 'type', e.target.value)}
-                          className="bg-transparent border-0 p-0 text-sm"
-                        >
-                          <option value="income">Receita</option>
-                          <option value="expense">Despesa</option>
-                        </select>
+                        <div className="flex items-center gap-1">
+                          <select
+                            value={row.type}
+                            onChange={e => updateRow(i, 'type', e.target.value)}
+                            className={`bg-transparent border-0 p-0 text-sm ${!row.typeConfirmed ? 'text-amber-600 font-medium' : ''}`}
+                          >
+                            <option value="income">Receita</option>
+                            <option value="expense">Despesa</option>
+                          </select>
+                          {!row.typeConfirmed && (
+                            <span title="Tipo não identificado automaticamente — confirme" className="text-amber-500">?</span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-2">
                         <select

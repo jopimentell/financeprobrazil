@@ -57,7 +57,20 @@ export function TransactionTable({ transactions, showActions = true, onEdit, pag
             {paginated.map(t => (
               <tr key={t.id} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
                 <td className="py-3 px-2 text-muted-foreground">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
-                <td className="py-3 px-2 font-medium">{t.description}</td>
+                <td className="py-3 px-2 font-medium">
+                  <div className="flex items-center gap-2">
+                    {t.description}
+                    {t.origin && t.origin !== 'manual' && (
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                        t.origin === 'importacao' ? 'bg-accent text-accent-foreground' :
+                        t.origin === 'parcelamento' ? 'bg-primary/10 text-primary' :
+                        'bg-muted text-muted-foreground'
+                      }`}>
+                        {t.origin === 'importacao' ? 'Importado' : t.origin === 'parcelamento' ? `${t.parcelaAtual}/${t.totalParcelas}` : t.origin}
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="py-3 px-2 hidden sm:table-cell">
                   <span className="inline-flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />
