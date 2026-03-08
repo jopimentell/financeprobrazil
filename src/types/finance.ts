@@ -116,8 +116,17 @@ export interface CreditCardInvoice {
   cardId: string;
   month: string; // YYYY-MM
   total: number;
-  status: 'open' | 'closed' | 'paid' | 'future';
+  status: 'open' | 'closed' | 'overdue' | 'paid' | 'future';
   expenses: CreditCardExpense[];
+  dueDate: string; // computed due date for this invoice
+}
+
+export interface PaidInvoice {
+  cardId: string;
+  month: string; // YYYY-MM
+  paidAt: string;
+  amount: number;
+  transactionId?: string;
 }
 
 export interface FinanceState {
