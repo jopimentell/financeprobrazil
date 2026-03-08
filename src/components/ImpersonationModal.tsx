@@ -38,9 +38,9 @@ export default function ImpersonationModal({ onSuccess }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-2 sm:p-4 lg:p-6">
       <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" onClick={cancelRequest} />
-      <div className="relative bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl w-full sm:max-w-[min(80vw,28rem)] max-h-[95vh] sm:max-h-[80vh] flex flex-col animate-fade-in overflow-hidden">
+      <div className="relative bg-card border border-border rounded-t-2xl sm:rounded-xl shadow-2xl w-[95vw] h-[90vh] sm:w-[90vw] sm:max-w-[700px] sm:h-auto sm:max-h-[85vh] lg:w-[80vw] lg:max-w-[1100px] flex flex-col animate-fade-in overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border">
           <div className="flex items-center gap-3">
@@ -77,74 +77,78 @@ export default function ImpersonationModal({ onSuccess }: Props) {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              <Lock className="h-3.5 w-3.5 inline mr-1" />
-              Senha do Administrador
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="Confirme sua senha"
-              className="input-field w-full"
-              required
-              disabled={isLocked}
-              autoFocus
-            />
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                <Lock className="h-3.5 w-3.5 inline mr-1" />
+                Senha do Administrador
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="Confirme sua senha"
+                className="input-field w-full"
+                required
+                disabled={isLocked}
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                Motivo (opcional)
+              </label>
+              <textarea
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder="Ex: Suporte técnico - ticket #1234"
+                className="input-field w-full resize-none"
+                rows={2}
+                disabled={isLocked}
+              />
+            </div>
+
+            {error && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <ShieldAlert className="h-4 w-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              </div>
+            )}
+
+            {isLocked && (
+              <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <Lock className="h-4 w-4 shrink-0" />
+                  <span>Bloqueado por {Math.ceil(lockRemainingSeconds / 60)} minuto(s)</span>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">
-              Motivo (opcional)
-            </label>
-            <textarea
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              placeholder="Ex: Suporte técnico - ticket #1234"
-              className="input-field w-full resize-none"
-              rows={2}
-              disabled={isLocked}
-            />
-          </div>
-
-          {error && (
-            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <ShieldAlert className="h-4 w-4 shrink-0" />
-                <span>{error}</span>
+          <div className="p-4 sm:p-5 border-t border-border shrink-0">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[10px] text-muted-foreground">
+                Sessão expira em 30 minutos
+              </p>
+              <div className="flex gap-2">
+                <button type="button" onClick={cancelRequest}
+                  className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent transition-colors">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={loading || isLocked || !password}
+                  className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+                  {loading ? (
+                    <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                  Confirmar e entrar
+                </button>
               </div>
-            </div>
-          )}
-
-          {isLocked && (
-            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-              <div className="flex items-center gap-2 text-sm text-destructive">
-                <Lock className="h-4 w-4 shrink-0" />
-                <span>Bloqueado por {Math.ceil(lockRemainingSeconds / 60)} minuto(s)</span>
-              </div>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-2">
-            <p className="text-[10px] text-muted-foreground">
-              Sessão expira em 30 minutos
-            </p>
-            <div className="flex gap-2">
-              <button type="button" onClick={cancelRequest}
-                className="px-4 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-accent transition-colors">
-                Cancelar
-              </button>
-              <button type="submit" disabled={loading || isLocked || !password}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
-                {loading ? (
-                  <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-                Confirmar e entrar
-              </button>
             </div>
           </div>
         </form>

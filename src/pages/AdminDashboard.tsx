@@ -308,49 +308,55 @@ export default function AdminDashboard() {
 
       {/* User Profile Modal */}
       {viewUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-4 lg:p-6">
           <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setViewUser(null)} />
-          <div className="relative bg-card rounded-xl shadow-xl w-full max-w-lg p-6 animate-scale-in max-h-[80vh] overflow-y-auto border border-border">
-            <h2 className="text-lg font-bold mb-4">Perfil: {viewUser.name}</h2>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{viewUser.email}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Role</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${viewUser.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-accent text-muted-foreground'}`}>
-                  {viewUser.role === 'admin' ? 'Admin' : 'Usuário'}
-                </span>
-              </div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Cadastro</span><span>{new Date(viewUser.createdAt).toLocaleDateString('pt-BR')}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Último Login</span><span>{new Date(viewUser.lastLogin).toLocaleDateString('pt-BR')}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Status</span>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${viewUser.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
-                  {viewUser.status === 'active' ? 'Ativo' : 'Inativo'}
-                </span>
-              </div>
-              <div className="border-t border-border pt-3 mt-3">
-                <h3 className="font-medium mb-3">Resumo Financeiro</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-lg bg-accent/50 p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Transações</p>
-                    <p className="text-lg font-bold">{transactions.length}</p>
-                  </div>
-                  <div className="rounded-lg bg-emerald-500/5 p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Receitas</p>
-                    <p className="text-lg font-bold text-emerald-600">R$ {transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  </div>
-                  <div className="rounded-lg bg-red-500/5 p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Despesas</p>
-                    <p className="text-lg font-bold text-red-500">R$ {transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                  </div>
-                  <div className="rounded-lg bg-primary/5 p-3 text-center">
-                    <p className="text-xs text-muted-foreground">Saldo</p>
-                    <p className="text-lg font-bold text-primary">R$ {(transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0) - transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+          <div className="relative bg-card rounded-t-2xl sm:rounded-xl shadow-xl w-[95vw] h-[90vh] sm:w-[90vw] sm:max-w-[700px] sm:h-auto sm:max-h-[85vh] lg:w-[80vw] lg:max-w-[1100px] border border-border flex flex-col animate-scale-in overflow-hidden">
+            <div className="p-4 sm:p-6 border-b border-border shrink-0">
+              <h2 className="text-lg font-bold">Perfil: {viewUser.name}</h2>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{viewUser.email}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Role</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${viewUser.role === 'admin' ? 'bg-primary/10 text-primary' : 'bg-accent text-muted-foreground'}`}>
+                    {viewUser.role === 'admin' ? 'Admin' : 'Usuário'}
+                  </span>
+                </div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Cadastro</span><span>{new Date(viewUser.createdAt).toLocaleDateString('pt-BR')}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Último Login</span><span>{new Date(viewUser.lastLogin).toLocaleDateString('pt-BR')}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Status</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${viewUser.status === 'active' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-red-500/10 text-red-500'}`}>
+                    {viewUser.status === 'active' ? 'Ativo' : 'Inativo'}
+                  </span>
+                </div>
+                <div className="border-t border-border pt-3 mt-3">
+                  <h3 className="font-medium mb-3">Resumo Financeiro</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg bg-accent/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Transações</p>
+                      <p className="text-lg font-bold">{transactions.length}</p>
+                    </div>
+                    <div className="rounded-lg bg-emerald-500/5 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Receitas</p>
+                      <p className="text-lg font-bold text-emerald-600">R$ {transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="rounded-lg bg-red-500/5 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Despesas</p>
+                      <p className="text-lg font-bold text-red-500">R$ {transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
+                    <div className="rounded-lg bg-primary/5 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Saldo</p>
+                      <p className="text-lg font-bold text-primary">R$ {(transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0) - transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            <button onClick={() => setViewUser(null)} className="w-full mt-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
-              Fechar
-            </button>
+            <div className="p-4 sm:p-6 border-t border-border shrink-0">
+              <button onClick={() => setViewUser(null)} className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}
