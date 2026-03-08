@@ -280,6 +280,8 @@ export function ImportStatementModal({ open, onClose }: Props) {
           </DialogTitle>
         </DialogHeader>
 
+        {/* Scrollable content area */}
+        <div className="flex-1 overflow-y-auto min-h-0">
         {/* ─── Step 1: Upload ─── */}
         {step === 'upload' && (
           <div className="space-y-6 py-4">
