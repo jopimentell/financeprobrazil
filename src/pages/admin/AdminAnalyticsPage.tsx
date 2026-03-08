@@ -1,83 +1,76 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
-import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const COLORS = ['#22c55e', '#ef4444', '#3b82f6', '#f97316', '#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#6b7280', '#10b981'];
 
 export default function AdminAnalyticsPage() {
   const { users } = useAuth();
-  const { transactions, categories } = useFinance();
+  const { allTransactions, allCategories, getUserTransactions } = useFinance();
 
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+  const today = now.toISOString().split('T')[0];
+  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
+  const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
 
   const regularUsers = useMemo(() => users.filter(u => u.role === 'user'), [users]);
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const avgTxPerUser = regularUsers.length > 0 ? Math.round(transactions.length / regularUsers.length) : 0;
+  const totalIncome = allTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalExpenses = allTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const avgTxPerUser = regularUsers.length > 0 ? Math.round(regularUsers.reduce((s, u) => s + getUserTransactions(u.id).length, 0) / regularUsers.length) : 0;
   const avgIncome = regularUsers.length > 0 ? totalIncome / regularUsers.length : 0;
   const avgExpenses = regularUsers.length > 0 ? totalExpenses / regularUsers.length : 0;
 
-  // Active users: daily (today), weekly (last 7 days), monthly
-  const today = now.toISOString().split('T')[0];
-  const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
   const dailyActive = regularUsers.filter(u => u.lastLogin >= today).length;
   const weeklyActive = regularUsers.filter(u => u.lastLogin >= weekAgo).length;
-  const monthlyActive = Math.min(Math.ceil(regularUsers.length * 0.7), regularUsers.length);
+  const monthlyActive = regularUsers.filter(u => u.lastLogin >= monthAgo).length;
 
   const txPerMonth = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
       const m = (currentMonth - 11 + i + 12) % 12;
       const y = currentMonth - 11 + i < 0 ? currentYear - 1 : currentYear;
-      const monthTx = transactions.filter(t => { const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; });
+      const monthTx = allTransactions.filter(t => { const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; });
       return {
         month: new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' }),
         receitas: monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
         despesas: monthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
       };
     });
-  }, [transactions, currentMonth, currentYear]);
+  }, [allTransactions, currentMonth, currentYear]);
 
   const categoryDistribution = useMemo(() => {
-    const expenseCats = categories.filter(c => c.type === 'expense');
-    return expenseCats.map(c => ({
-      name: c.name,
-      value: transactions.filter(t => t.categoryId === c.id).reduce((s, t) => s + t.amount, 0),
-      color: c.color,
-    })).filter(c => c.value > 0).sort((a, b) => b.value - a.value);
-  }, [transactions, categories]);
+    const expenseCats = allCategories.filter(c => c.type === 'expense');
+    const uniqueNames = [...new Set(expenseCats.map(c => c.name))];
+    return uniqueNames.map(name => {
+      const cats = expenseCats.filter(c => c.name === name);
+      const catIds = cats.map(c => c.id);
+      return {
+        name,
+        value: allTransactions.filter(t => catIds.includes(t.categoryId)).reduce((s, t) => s + t.amount, 0),
+        color: cats[0]?.color,
+      };
+    }).filter(c => c.value > 0).sort((a, b) => b.value - a.value);
+  }, [allTransactions, allCategories]);
 
-  // Top 10 users by transaction count (mock)
   const topUsers = useMemo(() => {
-    return regularUsers.slice(0, 10).map((u, i) => ({
-      name: u.name,
-      transacoes: Math.max(1, transactions.length - i * 2),
-    }));
-  }, [regularUsers, transactions]);
+    return regularUsers
+      .map(u => ({ name: u.name, transacoes: getUserTransactions(u.id).length }))
+      .sort((a, b) => b.transacoes - a.transacoes)
+      .slice(0, 10);
+  }, [regularUsers, getUserTransactions]);
 
   return (
     <div className="space-y-6 animate-fade-in">
       <h1 className="text-2xl font-bold">Analytics da Plataforma</h1>
 
-      {/* Active users */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="finance-card">
-          <p className="text-xs text-muted-foreground">Ativos hoje</p>
-          <p className="text-2xl font-bold mt-1">{dailyActive}</p>
-        </div>
-        <div className="finance-card">
-          <p className="text-xs text-muted-foreground">Ativos na semana</p>
-          <p className="text-2xl font-bold mt-1">{weeklyActive}</p>
-        </div>
-        <div className="finance-card">
-          <p className="text-xs text-muted-foreground">Ativos no mês</p>
-          <p className="text-2xl font-bold mt-1">{monthlyActive}</p>
-        </div>
+        <div className="finance-card"><p className="text-xs text-muted-foreground">Ativos hoje</p><p className="text-2xl font-bold mt-1">{dailyActive}</p></div>
+        <div className="finance-card"><p className="text-xs text-muted-foreground">Ativos na semana</p><p className="text-2xl font-bold mt-1">{weeklyActive}</p></div>
+        <div className="finance-card"><p className="text-xs text-muted-foreground">Ativos no mês</p><p className="text-2xl font-bold mt-1">{monthlyActive}</p></div>
       </div>
 
-      {/* Volume */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="finance-card">
           <p className="text-xs text-muted-foreground">Receita total</p>
@@ -95,23 +88,12 @@ export default function AdminAnalyticsPage() {
         </div>
       </div>
 
-      {/* Averages */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="finance-card">
-          <p className="text-xs text-muted-foreground">Média de transações/usuário</p>
-          <p className="text-2xl font-bold mt-1">{avgTxPerUser}</p>
-        </div>
-        <div className="finance-card">
-          <p className="text-xs text-muted-foreground">Média receitas/usuário</p>
-          <p className="text-xl font-bold finance-income mt-1">R$ {avgIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-        </div>
-        <div className="finance-card">
-          <p className="text-xs text-muted-foreground">Média despesas/usuário</p>
-          <p className="text-xl font-bold finance-expense mt-1">R$ {avgExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-        </div>
+        <div className="finance-card"><p className="text-xs text-muted-foreground">Média tx/usuário</p><p className="text-2xl font-bold mt-1">{avgTxPerUser}</p></div>
+        <div className="finance-card"><p className="text-xs text-muted-foreground">Média receitas/usuário</p><p className="text-xl font-bold finance-income mt-1">R$ {avgIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p></div>
+        <div className="finance-card"><p className="text-xs text-muted-foreground">Média despesas/usuário</p><p className="text-xl font-bold finance-expense mt-1">R$ {avgExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p></div>
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="finance-card">
           <h3 className="text-sm font-semibold mb-4">Receitas vs Despesas por Mês</h3>

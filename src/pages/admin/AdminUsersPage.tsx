@@ -3,15 +3,15 @@ import { useAuth, User } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronLeft, ChevronRight, Shield, ShieldOff, Lock, Unlock, Trash2, Eye, ArrowUpDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Shield, Lock, Unlock, Trash2, Eye, ArrowUpDown, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 type SortKey = 'name' | 'createdAt' | 'transactions';
 type SortDir = 'asc' | 'desc';
 
 export default function AdminUsersPage() {
-  const { users, user: currentUser, updateUserRole, toggleUserStatus, deleteUser } = useAuth();
-  const { transactions } = useFinance();
+  const { users, user: currentUser, updateUserRole, toggleUserStatus, deleteUser, startImpersonation } = useAuth();
+  const { getUserTransactions } = useFinance();
   const { addLog } = useAdminLogs();
   const navigate = useNavigate();
 
@@ -24,12 +24,12 @@ export default function AdminUsersPage() {
 
   const regularUsers = useMemo(() => users.filter(u => u.role === 'user'), [users]);
 
-  const getUserTxCount = (userId: string) => transactions.length; // mock: all transactions are shared
-  const getUserIncome = () => transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const getUserExpenses = () => transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const getUserTxCount = (userId: string) => getUserTransactions(userId).length;
+  const getUserIncome = (userId: string) => getUserTransactions(userId).filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const getUserExpenses = (userId: string) => getUserTransactions(userId).filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
 
   const filtered = useMemo(() => {
-    let list = regularUsers;
+    let list = [...regularUsers];
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(u => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q));
@@ -71,6 +71,13 @@ export default function AdminUsersPage() {
     updateUserRole(u.id, 'admin');
     addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'promoveu a admin', targetUserId: u.id, targetUserName: u.name });
     toast.success('Usuário promovido a administrador');
+  };
+
+  const handleImpersonate = (u: User) => {
+    startImpersonation(u.id);
+    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'impersonou usuário', targetUserId: u.id, targetUserName: u.name });
+    toast.success(`Visualizando como ${u.name}`);
+    navigate('/dashboard');
   };
 
   return (
@@ -126,8 +133,8 @@ export default function AdminUsersPage() {
                   <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{u.email}</td>
                   <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{new Date(u.createdAt).toLocaleDateString('pt-BR')}</td>
                   <td className="py-3 px-4 text-right hidden lg:table-cell">{getUserTxCount(u.id)}</td>
-                  <td className="py-3 px-4 text-right hidden lg:table-cell finance-income">R$ {getUserIncome().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                  <td className="py-3 px-4 text-right hidden lg:table-cell finance-expense">R$ {getUserExpenses().toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="py-3 px-4 text-right hidden lg:table-cell finance-income">R$ {getUserIncome(u.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="py-3 px-4 text-right hidden lg:table-cell finance-expense">R$ {getUserExpenses(u.id).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   <td className="py-3 px-4 text-muted-foreground hidden md:table-cell">{u.lastLogin}</td>
                   <td className="py-3 px-4 text-center">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -138,6 +145,9 @@ export default function AdminUsersPage() {
                     <div className="flex justify-end gap-0.5">
                       <button onClick={() => navigate(`/admin/users/${u.id}`)} className="p-1.5 rounded hover:bg-accent" title="Ver perfil">
                         <Eye className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                      <button onClick={() => handleImpersonate(u)} className="p-1.5 rounded hover:bg-accent" title="Visualizar como este usuário">
+                        <UserCheck className="h-4 w-4 text-amber-500" />
                       </button>
                       <button onClick={() => handleBlock(u)} className="p-1.5 rounded hover:bg-accent" title={u.status === 'active' ? 'Bloquear' : 'Desbloquear'}>
                         {u.status === 'active' ? <Lock className="h-4 w-4 text-muted-foreground" /> : <Unlock className="h-4 w-4 finance-income" />}

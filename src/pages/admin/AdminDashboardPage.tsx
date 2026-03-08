@@ -1,33 +1,26 @@
 import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
-import { Users, ArrowLeftRight, TrendingUp, TrendingDown, UserPlus, Activity } from 'lucide-react';
+import { Users, ArrowLeftRight, TrendingUp, TrendingDown, UserPlus, Activity, AlertTriangle, UserX, Ghost } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function AdminDashboardPage() {
   const { users } = useAuth();
-  const { transactions } = useFinance();
+  const { allTransactions, getUserTransactions } = useFinance();
 
   const now = new Date();
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
+  const today = now.toISOString().split('T')[0];
 
   const regularUsers = useMemo(() => users.filter(u => u.role === 'user'), [users]);
 
   const stats = useMemo(() => {
     const totalUsers = regularUsers.length;
-
-    const activeThisMonth = new Set(
-      transactions
-        .filter(t => { const d = new Date(t.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear; })
-        .map(() => 'user-activity') // mock: in real app would use userId
-    ).size > 0 ? Math.min(Math.ceil(totalUsers * 0.7), totalUsers) : 0;
-
-    const totalTransactions = transactions.length;
-    const totalIncome = transactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-    const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-
-    const today = now.toISOString().split('T')[0];
+    const activeUsers = regularUsers.filter(u => u.status === 'active').length;
+    const totalTransactions = allTransactions.length;
+    const totalIncome = allTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+    const totalExpenses = allTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
     const registeredToday = regularUsers.filter(u => u.createdAt === today).length;
 
     const thisMonthUsers = regularUsers.filter(u => {
@@ -42,8 +35,27 @@ export default function AdminDashboardPage() {
     }).length;
     const growthPct = lastMonthUsers === 0 ? (thisMonthUsers > 0 ? 100 : 0) : Math.round(((thisMonthUsers - lastMonthUsers) / lastMonthUsers) * 100);
 
-    return { totalUsers, activeThisMonth, totalTransactions, totalIncome, totalExpenses, registeredToday, growthPct, thisMonthUsers };
-  }, [regularUsers, transactions, currentMonth, currentYear, now]);
+    return { totalUsers, activeUsers, totalTransactions, totalIncome, totalExpenses, registeredToday, growthPct };
+  }, [regularUsers, allTransactions, currentMonth, currentYear, today]);
+
+  // Telemetry
+  const telemetry = useMemo(() => {
+    const neverTransacted = regularUsers.filter(u => getUserTransactions(u.id).length === 0).length;
+    const weekAgo = new Date(now.getTime() - 7 * 86400000).toISOString().split('T')[0];
+    const monthAgo = new Date(now.getTime() - 30 * 86400000).toISOString().split('T')[0];
+    const inactive30d = regularUsers.filter(u => u.lastLogin < monthAgo && u.status === 'active').length;
+    const activeToday = regularUsers.filter(u => u.lastLogin >= today).length;
+    const activeWeek = regularUsers.filter(u => u.lastLogin >= weekAgo).length;
+    const activeMonth = regularUsers.filter(u => u.lastLogin >= monthAgo).length;
+    const avgTxPerUser = regularUsers.length > 0
+      ? Math.round(regularUsers.reduce((s, u) => s + getUserTransactions(u.id).length, 0) / regularUsers.length)
+      : 0;
+    const retentionRate = regularUsers.length > 0
+      ? Math.round((activeMonth / regularUsers.length) * 100)
+      : 0;
+
+    return { neverTransacted, inactive30d, activeToday, activeWeek, activeMonth, avgTxPerUser, retentionRate };
+  }, [regularUsers, getUserTransactions, today, now]);
 
   const monthlyUsersChart = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => {
@@ -53,8 +65,7 @@ export default function AdminDashboardPage() {
         const d = new Date(u.createdAt);
         return d.getMonth() === m && d.getFullYear() === y;
       }).length;
-      const label = new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' });
-      return { month: label, usuarios: count };
+      return { month: new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' }), usuarios: count };
     });
   }, [regularUsers, currentMonth, currentYear]);
 
@@ -62,47 +73,39 @@ export default function AdminDashboardPage() {
     return Array.from({ length: 12 }, (_, i) => {
       const m = (currentMonth - 11 + i + 12) % 12;
       const y = currentMonth - 11 + i < 0 ? currentYear - 1 : currentYear;
-      const monthTx = transactions.filter(t => {
+      const monthTx = allTransactions.filter(t => {
         const d = new Date(t.date);
         return d.getMonth() === m && d.getFullYear() === y;
       });
-      const label = new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' });
       return {
-        month: label,
+        month: new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' }),
         receitas: monthTx.filter(t => t.type === 'income').length,
         despesas: monthTx.filter(t => t.type === 'expense').length,
       };
     });
-  }, [transactions, currentMonth, currentYear]);
+  }, [allTransactions, currentMonth, currentYear]);
 
   const growthChart = useMemo(() => {
     let cumulative = 0;
     return Array.from({ length: 12 }, (_, i) => {
       const m = (currentMonth - 11 + i + 12) % 12;
       const y = currentMonth - 11 + i < 0 ? currentYear - 1 : currentYear;
-      const count = regularUsers.filter(u => {
+      cumulative += regularUsers.filter(u => {
         const d = new Date(u.createdAt);
         return d.getMonth() === m && d.getFullYear() === y;
       }).length;
-      cumulative += count;
-      const label = new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' });
-      return { month: label, total: cumulative };
+      return { month: new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' }), total: cumulative };
     });
   }, [regularUsers, currentMonth, currentYear]);
 
   const cards = [
     { label: 'Usuários cadastrados', value: stats.totalUsers, icon: Users, color: 'text-primary' },
-    { label: 'Ativos no mês', value: stats.activeThisMonth, icon: Activity, color: 'finance-info' },
+    { label: 'Usuários ativos', value: stats.activeUsers, icon: Activity, color: 'text-primary' },
     { label: 'Total de transações', value: stats.totalTransactions, icon: ArrowLeftRight, color: 'text-primary' },
     { label: 'Receita total', value: `R$ ${stats.totalIncome.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: TrendingUp, color: 'finance-income' },
     { label: 'Despesas totais', value: `R$ ${stats.totalExpenses.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, icon: TrendingDown, color: 'finance-expense' },
     { label: 'Cadastros hoje', value: stats.registeredToday, icon: UserPlus, color: 'text-primary' },
-    {
-      label: 'Crescimento mensal',
-      value: `${stats.growthPct >= 0 ? '+' : ''}${stats.growthPct}%`,
-      icon: stats.growthPct >= 0 ? TrendingUp : TrendingDown,
-      color: stats.growthPct >= 0 ? 'finance-income' : 'finance-expense',
-    },
+    { label: 'Crescimento mensal', value: `${stats.growthPct >= 0 ? '+' : ''}${stats.growthPct}%`, icon: stats.growthPct >= 0 ? TrendingUp : TrendingDown, color: stats.growthPct >= 0 ? 'finance-income' : 'finance-expense' },
   ];
 
   return (
@@ -121,6 +124,66 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Telemetry - Product Health */}
+      <div>
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          <Activity className="h-5 w-5 text-primary" /> Saúde do Produto
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="finance-card flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-accent">
+              <Ghost className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Nunca transacionaram</p>
+              <p className="text-xl font-bold mt-0.5">{telemetry.neverTransacted}</p>
+              <p className="text-[10px] text-muted-foreground">{regularUsers.length > 0 ? `${Math.round((telemetry.neverTransacted / regularUsers.length) * 100)}% dos usuários` : ''}</p>
+            </div>
+          </div>
+          <div className="finance-card flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <UserX className="h-5 w-5 text-destructive" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Inativos 30+ dias</p>
+              <p className="text-xl font-bold mt-0.5">{telemetry.inactive30d}</p>
+            </div>
+          </div>
+          <div className="finance-card flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-accent">
+              <ArrowLeftRight className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Média tx/usuário</p>
+              <p className="text-xl font-bold mt-0.5">{telemetry.avgTxPerUser}</p>
+            </div>
+          </div>
+          <div className="finance-card flex items-start gap-3">
+            <div className={`p-2 rounded-lg ${telemetry.retentionRate >= 50 ? 'bg-accent' : 'bg-destructive/10'}`}>
+              <AlertTriangle className={`h-5 w-5 ${telemetry.retentionRate >= 50 ? 'text-primary' : 'text-destructive'}`} />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Taxa de retenção (30d)</p>
+              <p className="text-xl font-bold mt-0.5">{telemetry.retentionRate}%</p>
+            </div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+          <div className="finance-card text-center">
+            <p className="text-xs text-muted-foreground">Ativos hoje</p>
+            <p className="text-2xl font-bold mt-1">{telemetry.activeToday}</p>
+          </div>
+          <div className="finance-card text-center">
+            <p className="text-xs text-muted-foreground">Ativos na semana</p>
+            <p className="text-2xl font-bold mt-1">{telemetry.activeWeek}</p>
+          </div>
+          <div className="finance-card text-center">
+            <p className="text-xs text-muted-foreground">Ativos no mês</p>
+            <p className="text-2xl font-bold mt-1">{telemetry.activeMonth}</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
