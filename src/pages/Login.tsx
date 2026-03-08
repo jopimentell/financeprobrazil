@@ -63,6 +63,12 @@ export default function Login() {
 
   return (
     <div className="w-full max-w-md animate-fade-in">
+      <div className="mb-6">
+        <button onClick={() => navigate('/')} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
+      </div>
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
           <span className="text-primary-foreground text-2xl font-bold">F</span>
