@@ -41,6 +41,7 @@ import SubscriptionPage from "@/pages/Subscription";
 import ProfilePage from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 import Welcome from "@/pages/Welcome";
+import ResetPassword from "@/pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const App = () => (
                   <Route path="/" element={<Welcome />} />
                   <Route element={<AuthLayout />}>
                     <Route path="/login" element={<Login />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                   </Route>
                   {/* User financial routes */}
                   <Route element={<AppLayout />}>
