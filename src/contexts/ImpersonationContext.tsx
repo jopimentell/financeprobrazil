@@ -61,7 +61,7 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 export function ImpersonationProvider({ children }: { children: React.ReactNode }) {
-  const { user: realUser, users, login } = useAuth();
+  const { user: realUser, users, login, startImpersonation: authStartImpersonation, stopImpersonation: authStopImpersonation, impersonating } = useAuth();
   const [pendingTarget, setPendingTarget] = useState<User | null>(null);
   const [session, setSession] = useState<ImpersonationSession | null>(null);
   const [logs, setLogs] = useState<ImpersonationLog[]>(() => loadFromStorage(LOGS_KEY, []));
