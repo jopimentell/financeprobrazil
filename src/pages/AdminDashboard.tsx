@@ -125,8 +125,7 @@ export default function AdminDashboard() {
   }, [users, filterStatus]);
 
   const handleToggleAdmin = (u: User) => {
-    updateUserRole(u.id, u.role === 'admin' ? 'user' : 'admin');
-    toast.success(u.role === 'admin' ? 'Permissão de admin removida' : 'Usuário promovido a admin');
+    toast.error('Promoção de admin removida. Use /admin/admins/create.');
   };
 
   const handleToggleStatus = (u: User) => {
