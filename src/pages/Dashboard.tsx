@@ -49,7 +49,7 @@ export default function Dashboard() {
   const now = new Date();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getMonthTransactions, getYearTransactions, transactions: allUserTx } = useFinance();
+  const { getMonthTransactions, getYearTransactions, transactions: allUserTx, creditCards, creditCardExpenses, paidInvoices } = useFinance();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [annualView, setAnnualView] = useState(false);
