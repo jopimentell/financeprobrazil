@@ -47,7 +47,7 @@ function MetricCard({ title, value, icon: Icon, subtitle, trend, format = 'numbe
 }
 
 export default function AdminDashboard() {
-  const { users, isAdmin, updateUserRole, toggleUserStatus, deleteUser } = useAuth();
+  const { users, isAdmin, toggleUserStatus, deleteUser } = useAuth();
   const { transactions } = useFinance();
   const [viewUser, setViewUser] = useState<User | null>(null);
   const [filterStatus, setFilterStatus] = useState('all');
