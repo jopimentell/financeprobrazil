@@ -90,12 +90,63 @@ export default function AdminUserDetailPage() {
     requestImpersonation(targetUser);
   };
 
+  const handleDemoteAdmin = () => {
+    if (targetUser.id === currentUser?.id) {
+      toast.error('Você não pode remover seu próprio acesso de administrador.');
+      return;
+    }
+    if (targetUser.role !== 'admin') return;
+    updateUserRole(targetUser.id, 'user');
+    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: 'removeu acesso admin', targetUserId: targetUser.id, targetUserName: targetUser.name });
+    toast.success('O usuário foi convertido para usuário comum com sucesso.');
+    setDemoteOpen(false);
+    setDemoteConfirmText('');
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Impersonation Modal */}
       {pendingTarget && (
         <ImpersonationModal onSuccess={() => navigate('/dashboard')} />
       )}
+
+      {/* Demote Admin Modal */}
+      <AlertDialog open={demoteOpen} onOpenChange={(open) => { setDemoteOpen(open); if (!open) setDemoteConfirmText(''); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover acesso de administrador</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Você está prestes a remover os privilégios de administrador de <strong>{targetUser.name}</strong>.
+              </p>
+              <p>Após essa ação:</p>
+              <ul className="list-disc list-inside text-sm space-y-1">
+                <li>O usuário não terá mais acesso ao painel admin</li>
+                <li>O usuário passará a ser um usuário comum do sistema</li>
+              </ul>
+              <p className="font-medium pt-2">
+                Digite <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">CONFIRMAR</span> para continuar:
+              </p>
+              <Input
+                value={demoteConfirmText}
+                onChange={(e) => setDemoteConfirmText(e.target.value)}
+                placeholder="Digite CONFIRMAR"
+                className="mt-2"
+              />
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={demoteConfirmText !== 'CONFIRMAR'}
+              onClick={handleDemoteAdmin}
+            >
+              Confirmar remoção de acesso admin
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <button onClick={() => navigate('/admin/users')} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Voltar para lista
@@ -116,6 +167,12 @@ export default function AdminUserDetailPage() {
             <button onClick={handleImpersonate}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors">
               <UserCheck className="h-4 w-4" /> Entrar como usuário
+            </button>
+          )}
+          {targetUser.id !== currentUser?.id && targetUser.role === 'admin' && (
+            <button onClick={() => setDemoteOpen(true)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors">
+              <ShieldOff className="h-4 w-4" /> Remover acesso de administrador
             </button>
           )}
           {targetUser.id !== currentUser?.id && (
