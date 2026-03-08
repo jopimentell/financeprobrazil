@@ -170,7 +170,8 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     setAllSessions(prev => prev.map(s => s.sessionId === session.sessionId ? { ...s, isActive: false } : s));
     setSession(null);
     setRemainingTime(0);
-  }, [session, addLog]);
+    authStopImpersonation();
+  }, [session, addLog, authStopImpersonation]);
 
   const activeSessions = allSessions.filter(s => s.isActive);
 
