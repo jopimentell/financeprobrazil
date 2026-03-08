@@ -76,6 +76,7 @@ export default function Transactions() {
       </div>
 
       <TransactionModal open={modalOpen} onClose={() => { setModalOpen(false); setEditTx(null); }} transaction={editTx} />
+      <ImportStatementModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }

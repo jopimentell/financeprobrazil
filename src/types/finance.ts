@@ -14,7 +14,7 @@ export interface Transaction {
   /** Links installment transactions to the originating debt */
   parcelamentoId?: string;
   /** Origin of the transaction */
-  origin?: 'manual' | 'parcelamento';
+  origin?: 'manual' | 'parcelamento' | 'importacao';
   /** Current installment number (e.g. 1 of 10) */
   parcelaAtual?: number;
   /** Total installments in the series */
