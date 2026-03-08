@@ -60,7 +60,7 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 export function ImpersonationProvider({ children }: { children: React.ReactNode }) {
-  const { user: realUser, users, login, startImpersonation: authStartImpersonation, stopImpersonation: authStopImpersonation, impersonating } = useAuth();
+  const { user: authUser, users, isAdmin, startImpersonation: authStartImpersonation, stopImpersonation: authStopImpersonation, impersonating } = useAuth();
   const [pendingTarget, setPendingTarget] = useState<User | null>(null);
   const [session, setSession] = useState<ImpersonationSession | null>(null);
   const [logs, setLogs] = useState<ImpersonationLog[]>(() => loadFromStorage(LOGS_KEY, []));
@@ -71,9 +71,19 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
   const [lockRemainingSeconds, setLockRemainingSeconds] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const expiryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Store admin identity (not impersonated user)
+  const adminRef = useRef<{ id: string; name: string; email: string } | null>(null);
 
-  const adminId = realUser?.id || '';
-  const isAdmin = realUser?.role === 'admin';
+  // Capture admin identity when not impersonating
+  useEffect(() => {
+    if (isAdmin && !impersonating && authUser) {
+      adminRef.current = { id: authUser.id, name: authUser.name, email: authUser.email };
+    }
+  }, [isAdmin, impersonating, authUser]);
+
+  const adminId = adminRef.current?.id || authUser?.id || '';
+  const adminName = adminRef.current?.name || authUser?.name || '';
+  const adminEmail = adminRef.current?.email || authUser?.email || '';
 
   const blockedActions = new Set([
     'change_password', 'change_email', 'change_auth',
