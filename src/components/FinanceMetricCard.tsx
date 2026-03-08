@@ -6,6 +6,7 @@ interface FinanceMetricCardProps {
   icon: LucideIcon;
   type?: 'income' | 'expense' | 'info' | 'neutral';
   isCurrency?: boolean;
+  onClick?: () => void;
 }
 
 export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', isCurrency = true }: FinanceMetricCardProps) {
