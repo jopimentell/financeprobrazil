@@ -1,13 +1,20 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const initialMode = (searchParams.get('mode') as 'login' | 'register') || 'login';
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
+
+  useEffect(() => {
+    const m = searchParams.get('mode');
+    if (m === 'register' || m === 'login') setMode(m);
+  }, [searchParams]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
