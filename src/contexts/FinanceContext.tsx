@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog } from '@/types/finance';
-import { createDefaultCategories, createDefaultAccounts, createDefaultForecast } from '@/data/seedData';
 import { useAuth } from '@/contexts/AuthContext';
+import * as db from '@/database/localDatabase';
+import * as financeService from '@/services/financeService';
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -48,120 +49,28 @@ interface FinanceContextType {
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
 
-// Per-user storage helpers
-function userKey(userId: string, entity: string) {
-  return `finance_user_${userId}_${entity}`;
-}
-
-function loadUserData<T>(userId: string, entity: string, fallback: T): T {
-  try {
-    const stored = localStorage.getItem(userKey(userId, entity));
-    return stored ? JSON.parse(stored) : fallback;
-  } catch { return fallback; }
-}
-
-function saveUserData(userId: string, entity: string, value: unknown) {
-  localStorage.setItem(userKey(userId, entity), JSON.stringify(value));
-}
-
-// Shared storage for system-wide data (logs)
-function loadShared<T>(key: string, fallback: T): T {
-  try {
-    const stored = localStorage.getItem(`finance_${key}`);
-    return stored ? JSON.parse(stored) : fallback;
-  } catch { return fallback; }
-}
-function saveShared(key: string, value: unknown) {
-  localStorage.setItem(`finance_${key}`, JSON.stringify(value));
-}
-
-const uid = () => crypto.randomUUID();
-
-// Initialize a user's data if they have none yet
-function ensureUserData(userId: string): {
-  transactions: Transaction[];
-  categories: Category[];
-  accounts: Account[];
-  debts: Debt[];
-  investments: Investment[];
-  forecast: Forecast[];
-} {
-  const hasData = localStorage.getItem(userKey(userId, 'initialized'));
-
-  if (hasData) {
-    return {
-      transactions: loadUserData(userId, 'transactions', []),
-      categories: loadUserData(userId, 'categories', []),
-      accounts: loadUserData(userId, 'accounts', []),
-      debts: loadUserData(userId, 'debts', []),
-      investments: loadUserData(userId, 'investments', []),
-      forecast: loadUserData(userId, 'forecast', []),
-    };
-  }
-
-  // New user — create default categories, accounts, forecast; everything else empty
-  const categories = createDefaultCategories(userId);
-  const accounts = createDefaultAccounts(userId);
-  const forecast = createDefaultForecast(userId);
-  const transactions: Transaction[] = [];
-  const debts: Debt[] = [];
-  const investments: Investment[] = [];
-
-  saveUserData(userId, 'transactions', transactions);
-  saveUserData(userId, 'categories', categories);
-  saveUserData(userId, 'accounts', accounts);
-  saveUserData(userId, 'debts', debts);
-  saveUserData(userId, 'investments', investments);
-  saveUserData(userId, 'forecast', forecast);
-  localStorage.setItem(userKey(userId, 'initialized'), 'true');
-
-  return { transactions, categories, accounts, debts, investments, forecast };
-}
-
-// For admin: load all users' data by iterating known user IDs
-function loadAllUsersData(users: { id: string; role: string }[]) {
-  const allTx: Transaction[] = [];
-  const allCat: Category[] = [];
-  const allAcc: Account[] = [];
-  const allDbt: Debt[] = [];
-  const allInv: Investment[] = [];
-
-  for (const u of users) {
-    if (u.role === 'admin') continue; // admins don't have finance data
-    allTx.push(...loadUserData(u.id, 'transactions', []));
-    allCat.push(...loadUserData(u.id, 'categories', []));
-    allAcc.push(...loadUserData(u.id, 'accounts', []));
-    allDbt.push(...loadUserData(u.id, 'debts', []));
-    allInv.push(...loadUserData(u.id, 'investments', []));
-  }
-
-  return { allTx, allCat, allAcc, allDbt, allInv };
-}
-
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const { user, users: allUsers } = useAuth();
   const currentUserId = user?.id || '';
   const isAdmin = user?.role === 'admin';
 
-  // Per-user state
+  // Per-user state (loaded from centralized database)
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [forecast, setForecast] = useState<Forecast[]>([]);
-  const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => loadShared('system_logs', []));
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => financeService.getSystemLogs());
 
-  // Track which user's data is loaded
   const loadedUserRef = useRef<string>('');
 
-  // Load user data when currentUserId changes
+  // Load user data from centralized database when user changes
   useEffect(() => {
     if (!currentUserId || currentUserId === loadedUserRef.current) return;
     loadedUserRef.current = currentUserId;
 
     if (isAdmin) {
-      // Admin doesn't have own finance data — we'll compute aggregates in useMemo
       setTransactions([]);
       setCategories([]);
       setAccounts([]);
@@ -171,7 +80,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const data = ensureUserData(currentUserId);
+    const data = db.ensureUserData(currentUserId);
     setTransactions(data.transactions);
     setCategories(data.categories);
     setAccounts(data.accounts);
@@ -185,44 +94,33 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     if (!currentUserId) loadedUserRef.current = '';
   }, [currentUserId]);
 
+  // Persist helper — writes current entity to centralized DB
+  const persist = useCallback((entity: keyof db.UserFinanceData, value: unknown) => {
+    if (!currentUserId || isAdmin) return;
+    const dbInstance = db.loadDatabase();
+    if (!dbInstance.userData[currentUserId]) db.ensureUserData(currentUserId);
+    (dbInstance.userData[currentUserId] as any)[entity] = value;
+    db.saveDatabase(dbInstance);
+  }, [currentUserId, isAdmin]);
+
   // Persist per-user data on changes
-  useEffect(() => {
-    if (!currentUserId || isAdmin) return;
-    saveUserData(currentUserId, 'transactions', transactions);
-  }, [transactions, currentUserId, isAdmin]);
+  useEffect(() => { persist('transactions', transactions); }, [transactions, persist]);
+  useEffect(() => { persist('categories', categories); }, [categories, persist]);
+  useEffect(() => { persist('accounts', accounts); }, [accounts, persist]);
+  useEffect(() => { persist('debts', debts); }, [debts, persist]);
+  useEffect(() => { persist('investments', investments); }, [investments, persist]);
+  useEffect(() => { persist('forecast', forecast); }, [forecast, persist]);
 
   useEffect(() => {
-    if (!currentUserId || isAdmin) return;
-    saveUserData(currentUserId, 'categories', categories);
-  }, [categories, currentUserId, isAdmin]);
+    // System logs are saved through the service layer
+  }, [systemLogs]);
 
-  useEffect(() => {
-    if (!currentUserId || isAdmin) return;
-    saveUserData(currentUserId, 'accounts', accounts);
-  }, [accounts, currentUserId, isAdmin]);
-
-  useEffect(() => {
-    if (!currentUserId || isAdmin) return;
-    saveUserData(currentUserId, 'debts', debts);
-  }, [debts, currentUserId, isAdmin]);
-
-  useEffect(() => {
-    if (!currentUserId || isAdmin) return;
-    saveUserData(currentUserId, 'investments', investments);
-  }, [investments, currentUserId, isAdmin]);
-
-  useEffect(() => {
-    if (!currentUserId || isAdmin) return;
-    saveUserData(currentUserId, 'forecast', forecast);
-  }, [forecast, currentUserId, isAdmin]);
-
-  useEffect(() => { saveShared('system_logs', systemLogs); }, [systemLogs]);
-
-  // Admin aggregated data — computed from all users
+  // Admin aggregated data
   const adminData = useMemo(() => {
     if (!isAdmin) return null;
-    return loadAllUsersData(allUsers);
-  }, [isAdmin, allUsers, /* refresh when any user CRUD happens */ transactions]);
+    const nonAdminIds = allUsers.filter(u => u.role !== 'admin').map(u => u.id);
+    return db.getAllUsersData(nonAdminIds);
+  }, [isAdmin, allUsers, transactions]);
 
   const allTransactions = isAdmin ? (adminData?.allTx || []) : transactions;
   const allCategories = isAdmin ? (adminData?.allCat || []) : categories;
@@ -230,56 +128,93 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const allDebts = isAdmin ? (adminData?.allDbt || []) : debts;
   const allInvestments = isAdmin ? (adminData?.allInv || []) : investments;
 
-  const addSystemLog = useCallback((log: Omit<SystemLog, 'id' | 'timestamp'>) => {
-    setSystemLogs(prev => [{ ...log, id: uid(), timestamp: new Date().toISOString() }, ...prev].slice(0, 1000));
+  const addSystemLogFn = useCallback((log: Omit<SystemLog, 'id' | 'timestamp'>) => {
+    const newLog = financeService.createSystemLog(log);
+    setSystemLogs(prev => [newLog, ...prev].slice(0, 1000));
   }, []);
 
   const addTransaction = useCallback((t: Omit<Transaction, 'id' | 'userId'>) => {
-    setTransactions(prev => [...prev, { ...t, id: uid(), userId: currentUserId }]);
-    addSystemLog({ userId: currentUserId, userName: user?.name || '', action: 'create_transaction', entity: 'transaction', details: t.description });
-  }, [currentUserId, user?.name, addSystemLog]);
+    const newTx = financeService.addTransaction(currentUserId, t);
+    setTransactions(prev => [...prev, newTx]);
+    addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'create_transaction', entity: 'transaction', details: t.description });
+  }, [currentUserId, user?.name, addSystemLogFn]);
 
   const updateTransaction = useCallback((t: Transaction) => {
+    financeService.updateTransaction(currentUserId, t);
     setTransactions(prev => prev.map(x => x.id === t.id ? t : x));
-  }, []);
+  }, [currentUserId]);
 
   const deleteTransaction = useCallback((id: string) => {
+    financeService.deleteTransaction(currentUserId, id);
     setTransactions(prev => prev.filter(x => x.id !== id));
-    addSystemLog({ userId: currentUserId, userName: user?.name || '', action: 'delete_transaction', entity: 'transaction', entityId: id });
-  }, [currentUserId, user?.name, addSystemLog]);
+    addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'delete_transaction', entity: 'transaction', entityId: id });
+  }, [currentUserId, user?.name, addSystemLogFn]);
 
   const addCategory = useCallback((c: Omit<Category, 'id' | 'userId'>) => {
-    setCategories(prev => [...prev, { ...c, id: uid(), userId: currentUserId }]);
-    addSystemLog({ userId: currentUserId, userName: user?.name || '', action: 'create_category', entity: 'category', details: c.name });
-  }, [currentUserId, user?.name, addSystemLog]);
+    const newCat = financeService.addCategory(currentUserId, c);
+    setCategories(prev => [...prev, newCat]);
+    addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'create_category', entity: 'category', details: c.name });
+  }, [currentUserId, user?.name, addSystemLogFn]);
 
-  const updateCategory = useCallback((c: Category) => setCategories(prev => prev.map(x => x.id === c.id ? c : x)), []);
+  const updateCategory = useCallback((c: Category) => {
+    financeService.updateCategory(currentUserId, c);
+    setCategories(prev => prev.map(x => x.id === c.id ? c : x));
+  }, [currentUserId]);
+
   const deleteCategory = useCallback((id: string) => {
+    financeService.deleteCategory(currentUserId, id);
     setCategories(prev => prev.filter(x => x.id !== id));
-  }, []);
+  }, [currentUserId]);
 
   const addAccount = useCallback((a: Omit<Account, 'id' | 'userId'>) => {
-    setAccounts(prev => [...prev, { ...a, id: uid(), userId: currentUserId }]);
+    const newAcc = financeService.addAccount(currentUserId, a);
+    setAccounts(prev => [...prev, newAcc]);
   }, [currentUserId]);
 
-  const updateAccount = useCallback((a: Account) => setAccounts(prev => prev.map(x => x.id === a.id ? a : x)), []);
-  const deleteAccount = useCallback((id: string) => setAccounts(prev => prev.filter(x => x.id !== id)), []);
+  const updateAccount = useCallback((a: Account) => {
+    financeService.updateAccount(currentUserId, a);
+    setAccounts(prev => prev.map(x => x.id === a.id ? a : x));
+  }, [currentUserId]);
+
+  const deleteAccount = useCallback((id: string) => {
+    financeService.deleteAccount(currentUserId, id);
+    setAccounts(prev => prev.filter(x => x.id !== id));
+  }, [currentUserId]);
 
   const addDebt = useCallback((d: Omit<Debt, 'id' | 'userId'>) => {
-    setDebts(prev => [...prev, { ...d, id: uid(), userId: currentUserId }]);
+    const newDebt = financeService.addDebt(currentUserId, d);
+    setDebts(prev => [...prev, newDebt]);
   }, [currentUserId]);
 
-  const updateDebt = useCallback((d: Debt) => setDebts(prev => prev.map(x => x.id === d.id ? d : x)), []);
-  const deleteDebt = useCallback((id: string) => setDebts(prev => prev.filter(x => x.id !== id)), []);
+  const updateDebt = useCallback((d: Debt) => {
+    financeService.updateDebt(currentUserId, d);
+    setDebts(prev => prev.map(x => x.id === d.id ? d : x));
+  }, [currentUserId]);
+
+  const deleteDebt = useCallback((id: string) => {
+    financeService.deleteDebt(currentUserId, id);
+    setDebts(prev => prev.filter(x => x.id !== id));
+  }, [currentUserId]);
 
   const addInvestment = useCallback((i: Omit<Investment, 'id' | 'userId'>) => {
-    setInvestments(prev => [...prev, { ...i, id: uid(), userId: currentUserId }]);
+    const newInv = financeService.addInvestment(currentUserId, i);
+    setInvestments(prev => [...prev, newInv]);
   }, [currentUserId]);
 
-  const updateInvestment = useCallback((i: Investment) => setInvestments(prev => prev.map(x => x.id === i.id ? i : x)), []);
-  const deleteInvestment = useCallback((id: string) => setInvestments(prev => prev.filter(x => x.id !== id)), []);
+  const updateInvestment = useCallback((i: Investment) => {
+    financeService.updateInvestment(currentUserId, i);
+    setInvestments(prev => prev.map(x => x.id === i.id ? i : x));
+  }, [currentUserId]);
 
-  const updateForecast = useCallback((f: Forecast[]) => setForecast(f), []);
+  const deleteInvestment = useCallback((id: string) => {
+    financeService.deleteInvestment(currentUserId, id);
+    setInvestments(prev => prev.filter(x => x.id !== id));
+  }, [currentUserId]);
+
+  const updateForecastFn = useCallback((f: Forecast[]) => {
+    financeService.updateForecast(currentUserId, f);
+    setForecast(f);
+  }, [currentUserId]);
 
   const syncToSheet = useCallback(() => {
     console.log('Syncing to Google Sheets...');
@@ -312,12 +247,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return all.find(c => c.id === id)?.color || '#6b7280';
   }, [categories, allCategories, isAdmin]);
 
-  // Admin helpers — load specific user data from their isolated storage
-  const getUserTransactions = useCallback((userId: string) => loadUserData<Transaction[]>(userId, 'transactions', []), []);
-  const getUserCategories = useCallback((userId: string) => loadUserData<Category[]>(userId, 'categories', []), []);
-  const getUserAccounts = useCallback((userId: string) => loadUserData<Account[]>(userId, 'accounts', []), []);
-  const getUserDebts = useCallback((userId: string) => loadUserData<Debt[]>(userId, 'debts', []), []);
-  const getUserInvestments = useCallback((userId: string) => loadUserData<Investment[]>(userId, 'investments', []), []);
+  // Admin helpers — read from centralized database
+  const getUserTransactions = useCallback((userId: string) => financeService.getTransactions(userId), []);
+  const getUserCategories = useCallback((userId: string) => financeService.getCategories(userId), []);
+  const getUserAccounts = useCallback((userId: string) => financeService.getAccounts(userId), []);
+  const getUserDebts = useCallback((userId: string) => financeService.getDebts(userId), []);
+  const getUserInvestments = useCallback((userId: string) => financeService.getInvestments(userId), []);
 
   return (
     <FinanceContext.Provider value={{
@@ -328,11 +263,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       addAccount, updateAccount, deleteAccount,
       addDebt, updateDebt, deleteDebt,
       addInvestment, updateInvestment, deleteInvestment,
-      updateForecast, syncToSheet,
+      updateForecast: updateForecastFn, syncToSheet,
       getMonthTransactions, getYearTransactions,
       getCategoryName, getAccountName, getCategoryColor,
       getUserTransactions, getUserCategories, getUserAccounts, getUserDebts, getUserInvestments,
-      systemLogs, addSystemLog,
+      systemLogs, addSystemLog: addSystemLogFn,
     }}>
       {children}
     </FinanceContext.Provider>
