@@ -27,6 +27,8 @@ import AdminUsersPage from "@/pages/admin/AdminUsersPage";
 import AdminUserDetailPage from "@/pages/admin/AdminUserDetailPage";
 import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import AdminSecurityPage from "@/pages/admin/AdminSecurityPage";
+import AdminLogsPage from "@/pages/admin/AdminLogsPage";
+import AdminSettingsPage from "@/pages/admin/AdminSettingsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
