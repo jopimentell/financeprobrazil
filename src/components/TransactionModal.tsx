@@ -138,10 +138,14 @@ export function TransactionModal({ open, onClose, transaction, defaultType }: Tr
             <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
               className="w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring" rows={2} />
           </div>
-          <button type="submit" className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
-            {isEdit ? 'Salvar Alterações' : 'Adicionar Transação'}
-          </button>
+          {/* Footer */}
+          <div className="p-4 sm:p-6 border-t border-border shrink-0">
+            <button type="submit" className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
+              {isEdit ? 'Salvar Alterações' : 'Adicionar Transação'}
+            </button>
+          </div>
         </form>
+        </div>
       </div>
     </div>
   );
