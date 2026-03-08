@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
-import * as db from '@/database/localDatabase';
 import * as financeService from '@/services/financeService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -73,10 +73,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [creditCardExpenses, setCreditCardExpenses] = useState<CreditCardExpense[]>([]);
   const [paidInvoices, setPaidInvoices] = useState<PaidInvoice[]>([]);
-  const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => financeService.getSystemLogs());
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
 
   const loadedUserRef = useRef<string>('');
 
+  // Load data from Supabase when user changes
   useEffect(() => {
     if (!currentUserId || currentUserId === loadedUserRef.current) return;
     loadedUserRef.current = currentUserId;
@@ -85,48 +86,56 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setTransactions([]); setCategories([]); setAccounts([]);
       setDebts([]); setInvestments([]); setForecast([]);
       setCreditCards([]); setCreditCardExpenses([]); setPaidInvoices([]);
+      // Load system logs for admin
+      financeService.getSystemLogs().then(logs => setSystemLogs(logs));
       return;
     }
 
-    const data = db.ensureUserData(currentUserId);
-    setTransactions(data.transactions);
-    setCategories(data.categories);
-    setAccounts(data.accounts);
-    setDebts(data.debts);
-    setInvestments(data.investments);
-    setForecast(data.forecast);
-    setCreditCards(data.creditCards || []);
-    setCreditCardExpenses(data.creditCardExpenses || []);
-    setPaidInvoices(data.paidInvoices || []);
+    (async () => {
+      // Seed defaults if new user
+      await financeService.seedDefaultData(currentUserId);
+      const data = await financeService.fetchAllUserData(currentUserId);
+      setTransactions(data.transactions);
+      setCategories(data.categories);
+      setAccounts(data.accounts);
+      setDebts(data.debts);
+      setInvestments(data.investments);
+      setForecast(data.forecast);
+      setCreditCards(data.creditCards);
+      setCreditCardExpenses(data.creditCardExpenses);
+      setPaidInvoices(data.paidInvoices);
+    })();
   }, [currentUserId, isAdmin]);
 
   useEffect(() => {
     if (!currentUserId) loadedUserRef.current = '';
   }, [currentUserId]);
 
-  const persist = useCallback((entity: keyof db.UserFinanceData, value: unknown) => {
-    if (!currentUserId || isAdmin) return;
-    const dbInstance = db.loadDatabase();
-    if (!dbInstance.userData[currentUserId]) db.ensureUserData(currentUserId);
-    (dbInstance.userData[currentUserId] as any)[entity] = value;
-    db.saveDatabase(dbInstance);
-  }, [currentUserId, isAdmin]);
+  // Admin aggregated data
+  const [adminData, setAdminData] = useState<{
+    allTx: Transaction[]; allCat: Category[]; allAcc: Account[];
+    allDbt: Debt[]; allInv: Investment[];
+  } | null>(null);
 
-  useEffect(() => { persist('transactions', transactions); }, [transactions, persist]);
-  useEffect(() => { persist('categories', categories); }, [categories, persist]);
-  useEffect(() => { persist('accounts', accounts); }, [accounts, persist]);
-  useEffect(() => { persist('debts', debts); }, [debts, persist]);
-  useEffect(() => { persist('investments', investments); }, [investments, persist]);
-  useEffect(() => { persist('forecast', forecast); }, [forecast, persist]);
-  useEffect(() => { persist('creditCards', creditCards); }, [creditCards, persist]);
-  useEffect(() => { persist('creditCardExpenses', creditCardExpenses); }, [creditCardExpenses, persist]);
-  useEffect(() => { persist('paidInvoices', paidInvoices); }, [paidInvoices, persist]);
-
-  const adminData = useMemo(() => {
-    if (!isAdmin) return null;
-    const nonAdminIds = allUsers.filter(u => u.role !== 'admin').map(u => u.id);
-    return db.getAllUsersData(nonAdminIds);
-  }, [isAdmin, allUsers, transactions]);
+  useEffect(() => {
+    if (!isAdmin) { setAdminData(null); return; }
+    (async () => {
+      const [txRes, catRes, accRes, debtRes, invRes] = await Promise.all([
+        supabase.from('transactions').select('*'),
+        supabase.from('categories').select('*'),
+        supabase.from('accounts').select('*'),
+        supabase.from('debts').select('*'),
+        supabase.from('investments').select('*'),
+      ]);
+      setAdminData({
+        allTx: (txRes.data || []).map((r: any) => ({ id: r.id, userId: r.user_id, description: r.description, amount: Number(r.amount), type: r.type, categoryId: r.category_id || '', accountId: r.account_id || '', date: r.date, status: r.status, recurrence: r.recurrence, installments: r.installments, notes: r.notes, parcelamentoId: r.parcelamento_id, origin: r.origin, parcelaAtual: r.parcela_atual, totalParcelas: r.total_parcelas })),
+        allCat: (catRes.data || []).map((r: any) => ({ id: r.id, userId: r.user_id, name: r.name, type: r.type, color: r.color })),
+        allAcc: (accRes.data || []).map((r: any) => ({ id: r.id, userId: r.user_id, name: r.name, type: r.type, balance: Number(r.balance) })),
+        allDbt: (debtRes.data || []).map((r: any) => ({ id: r.id, userId: r.user_id, creditor: r.creditor, totalAmount: Number(r.total_amount), remainingAmount: Number(r.remaining_amount), installments: r.installments, paidInstallments: r.paid_installments, interestRate: Number(r.interest_rate), dueDate: r.due_date })),
+        allInv: (invRes.data || []).map((r: any) => ({ id: r.id, userId: r.user_id, name: r.name, type: r.type, investedAmount: Number(r.invested_amount), currentValue: Number(r.current_value), profit: Number(r.profit) })),
+      });
+    })();
+  }, [isAdmin, user?.id]);
 
   const allTransactions = isAdmin ? (adminData?.allTx || []) : transactions;
   const allCategories = isAdmin ? (adminData?.allCat || []) : categories;
@@ -135,100 +144,121 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const allInvestments = isAdmin ? (adminData?.allInv || []) : investments;
 
   const addSystemLogFn = useCallback((log: Omit<SystemLog, 'id' | 'timestamp'>) => {
-    const newLog = financeService.createSystemLog(log);
+    const id = crypto.randomUUID();
+    const timestamp = new Date().toISOString();
+    const newLog = { ...log, id, timestamp };
     setSystemLogs(prev => [newLog, ...prev].slice(0, 1000));
+    financeService.createSystemLog(log); // fire-and-forget
   }, []);
 
   const addTransaction = useCallback((t: Omit<Transaction, 'id' | 'userId'>) => {
-    const newTx = financeService.addTransaction(currentUserId, t);
+    const id = crypto.randomUUID();
+    const newTx: Transaction = { ...t, id, userId: currentUserId };
     setTransactions(prev => [...prev, newTx]);
+    financeService.addTransaction(currentUserId, t).then(result => {
+      // Update with server-assigned id if different
+      if (result.id !== id) {
+        setTransactions(prev => prev.map(x => x.id === id ? result : x));
+      }
+    });
     addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'create_transaction', entity: 'transaction', details: t.description });
   }, [currentUserId, user?.name, addSystemLogFn]);
 
   const updateTransaction = useCallback((t: Transaction) => {
-    financeService.updateTransaction(currentUserId, t);
     setTransactions(prev => prev.map(x => x.id === t.id ? t : x));
+    financeService.updateTransaction(currentUserId, t);
   }, [currentUserId]);
 
   const deleteTransaction = useCallback((id: string) => {
-    financeService.deleteTransaction(currentUserId, id);
     setTransactions(prev => prev.filter(x => x.id !== id));
+    financeService.deleteTransaction(currentUserId, id);
     addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'delete_transaction', entity: 'transaction', entityId: id });
   }, [currentUserId, user?.name, addSystemLogFn]);
 
   const addCategory = useCallback((c: Omit<Category, 'id' | 'userId'>) => {
-    const newCat = financeService.addCategory(currentUserId, c);
+    const id = crypto.randomUUID();
+    const newCat: Category = { ...c, id, userId: currentUserId };
     setCategories(prev => [...prev, newCat]);
+    financeService.addCategory(currentUserId, c);
     addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'create_category', entity: 'category', details: c.name });
   }, [currentUserId, user?.name, addSystemLogFn]);
 
   const updateCategory = useCallback((c: Category) => {
-    financeService.updateCategory(currentUserId, c);
     setCategories(prev => prev.map(x => x.id === c.id ? c : x));
+    financeService.updateCategory(currentUserId, c);
   }, [currentUserId]);
 
   const deleteCategory = useCallback((id: string) => {
-    financeService.deleteCategory(currentUserId, id);
     setCategories(prev => prev.filter(x => x.id !== id));
+    financeService.deleteCategory(currentUserId, id);
   }, [currentUserId]);
 
   const addAccount = useCallback((a: Omit<Account, 'id' | 'userId'>) => {
-    const newAcc = financeService.addAccount(currentUserId, a);
+    const id = crypto.randomUUID();
+    const newAcc: Account = { ...a, id, userId: currentUserId };
     setAccounts(prev => [...prev, newAcc]);
+    financeService.addAccount(currentUserId, a);
   }, [currentUserId]);
 
   const updateAccount = useCallback((a: Account) => {
-    financeService.updateAccount(currentUserId, a);
     setAccounts(prev => prev.map(x => x.id === a.id ? a : x));
+    financeService.updateAccount(currentUserId, a);
   }, [currentUserId]);
 
   const deleteAccount = useCallback((id: string) => {
-    financeService.deleteAccount(currentUserId, id);
     setAccounts(prev => prev.filter(x => x.id !== id));
+    financeService.deleteAccount(currentUserId, id);
   }, [currentUserId]);
 
   const addDebt = useCallback((d: Omit<Debt, 'id' | 'userId'> & { categoryId?: string; accountId?: string }) => {
     const categoryId = d.categoryId || categories.find(c => c.type === 'expense')?.id || '';
     const accountId = d.accountId || accounts[0]?.id || '';
-    const { debt: newDebt, installments } = financeService.addDebtWithInstallments(
-      currentUserId, d, categoryId, accountId
-    );
-    setDebts(prev => [...prev, newDebt]);
-    setTransactions(prev => [...prev, ...installments]);
+
+    // Optimistic: add debt immediately
+    const tempDebtId = crypto.randomUUID();
+    const tempDebt: Debt = { ...d, id: tempDebtId, userId: currentUserId };
+    setDebts(prev => [...prev, tempDebt]);
+
+    financeService.addDebtWithInstallments(currentUserId, d, categoryId, accountId).then(({ debt, installments }) => {
+      setDebts(prev => prev.map(x => x.id === tempDebtId ? debt : x));
+      setTransactions(prev => [...prev, ...installments]);
+    });
+
     addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'create_debt', entity: 'debt', details: `${d.creditor} - ${d.installments} parcelas` });
   }, [currentUserId, categories, accounts, user?.name, addSystemLogFn]);
 
   const updateDebt = useCallback((d: Debt) => {
-    financeService.updateDebt(currentUserId, d);
     setDebts(prev => prev.map(x => x.id === d.id ? d : x));
+    financeService.updateDebt(currentUserId, d);
   }, [currentUserId]);
 
   const deleteDebt = useCallback((id: string) => {
-    financeService.deleteDebt(currentUserId, id);
     setDebts(prev => prev.filter(x => x.id !== id));
-    const data = db.getUserData(currentUserId);
-    setTransactions(data.transactions);
+    setTransactions(prev => prev.filter(tx => tx.parcelamentoId !== id));
+    financeService.deleteDebt(currentUserId, id);
     addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'delete_debt', entity: 'debt', entityId: id });
   }, [currentUserId, user?.name, addSystemLogFn]);
 
   const addInvestment = useCallback((i: Omit<Investment, 'id' | 'userId'>) => {
-    const newInv = financeService.addInvestment(currentUserId, i);
+    const id = crypto.randomUUID();
+    const newInv: Investment = { ...i, id, userId: currentUserId };
     setInvestments(prev => [...prev, newInv]);
+    financeService.addInvestment(currentUserId, i);
   }, [currentUserId]);
 
   const updateInvestment = useCallback((i: Investment) => {
-    financeService.updateInvestment(currentUserId, i);
     setInvestments(prev => prev.map(x => x.id === i.id ? i : x));
+    financeService.updateInvestment(currentUserId, i);
   }, [currentUserId]);
 
   const deleteInvestment = useCallback((id: string) => {
-    financeService.deleteInvestment(currentUserId, id);
     setInvestments(prev => prev.filter(x => x.id !== id));
+    financeService.deleteInvestment(currentUserId, id);
   }, [currentUserId]);
 
   const updateForecastFn = useCallback((f: Forecast[]) => {
-    financeService.updateForecast(currentUserId, f);
     setForecast(f);
+    financeService.updateForecast(currentUserId, f);
   }, [currentUserId]);
 
   const syncToSheet = useCallback(() => {
@@ -261,53 +291,59 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return all.find(c => c.id === id)?.color || '#6b7280';
   }, [categories, allCategories, isAdmin]);
 
-  const getUserTransactions = useCallback((userId: string) => financeService.getTransactions(userId), []);
-  const getUserCategories = useCallback((userId: string) => financeService.getCategories(userId), []);
-  const getUserAccounts = useCallback((userId: string) => financeService.getAccounts(userId), []);
-  const getUserDebts = useCallback((userId: string) => financeService.getDebts(userId), []);
-  const getUserInvestments = useCallback((userId: string) => financeService.getInvestments(userId), []);
+  // These return from local state for the admin view
+  const getUserTransactions = useCallback((userId: string) => allTransactions.filter(t => t.userId === userId), [allTransactions]);
+  const getUserCategories = useCallback((userId: string) => allCategories.filter(c => c.userId === userId), [allCategories]);
+  const getUserAccounts = useCallback((userId: string) => allAccounts.filter(a => a.userId === userId), [allAccounts]);
+  const getUserDebts = useCallback((userId: string) => allDebts.filter(d => d.userId === userId), [allDebts]);
+  const getUserInvestments = useCallback((userId: string) => allInvestments.filter(i => i.userId === userId), [allInvestments]);
 
   // Credit card operations
   const addCreditCardFn = useCallback((c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => {
-    const newCard = financeService.addCreditCard(currentUserId, c);
+    const id = crypto.randomUUID();
+    const newCard: CreditCard = { ...c, id, userId: currentUserId, createdAt: new Date().toISOString().split('T')[0] };
     setCreditCards(prev => [...prev, newCard]);
+    financeService.addCreditCard(currentUserId, c);
   }, [currentUserId]);
 
   const updateCreditCardFn = useCallback((c: CreditCard) => {
-    financeService.updateCreditCard(currentUserId, c);
     setCreditCards(prev => prev.map(x => x.id === c.id ? c : x));
+    financeService.updateCreditCard(currentUserId, c);
   }, [currentUserId]);
 
   const deleteCreditCardFn = useCallback((id: string) => {
-    financeService.deleteCreditCard(currentUserId, id);
     setCreditCards(prev => prev.filter(x => x.id !== id));
     setCreditCardExpenses(prev => prev.filter(x => x.cardId !== id));
+    financeService.deleteCreditCard(currentUserId, id);
   }, [currentUserId]);
 
   const addCreditCardExpenseFn = useCallback((e: Omit<CreditCardExpense, 'id' | 'userId'>) => {
-    const generated = financeService.addCreditCardExpense(currentUserId, e);
-    setCreditCardExpenses(prev => [...prev, ...generated]);
+    financeService.addCreditCardExpense(currentUserId, e).then(generated => {
+      setCreditCardExpenses(prev => [...prev, ...generated]);
+    });
   }, [currentUserId]);
 
   const updateCreditCardExpenseFn = useCallback((id: string, updates: Partial<CreditCardExpense>) => {
-    financeService.updateCreditCardExpense(currentUserId, id, updates);
     setCreditCardExpenses(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+    financeService.updateCreditCardExpense(currentUserId, id, updates);
   }, [currentUserId]);
 
   const deleteCreditCardExpenseFn = useCallback((id: string) => {
+    const expense = creditCardExpenses.find(e => e.id === id);
+    if (expense) {
+      const parentId = expense.parentExpenseId || expense.id;
+      setCreditCardExpenses(prev => prev.filter(e => e.id !== parentId && e.parentExpenseId !== parentId));
+    }
     financeService.deleteCreditCardExpense(currentUserId, id);
-    const updated = financeService.getCreditCardExpenses(currentUserId);
-    setCreditCardExpenses(updated);
-  }, [currentUserId]);
+  }, [currentUserId, creditCardExpenses]);
 
   const payInvoiceFn = useCallback((cardId: string, month: string, amount: number) => {
     const categoryId = categories.find(c => c.type === 'expense')?.id || '';
     const accountId = accounts[0]?.id || '';
-    const { paidInvoice, transaction } = financeService.markInvoicePaid(
-      currentUserId, cardId, month, amount, categoryId, accountId
-    );
-    setPaidInvoices(prev => [...prev, paidInvoice]);
-    setTransactions(prev => [...prev, transaction]);
+    financeService.markInvoicePaid(currentUserId, cardId, month, amount, categoryId, accountId).then(({ paidInvoice, transaction }) => {
+      setPaidInvoices(prev => [...prev, paidInvoice]);
+      setTransactions(prev => [...prev, transaction]);
+    });
   }, [currentUserId, categories, accounts]);
 
   return (

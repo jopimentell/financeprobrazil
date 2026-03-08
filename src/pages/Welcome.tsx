@@ -4,12 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const [showSplash, setShowSplash] = useState(true);
 
   // If already logged in, skip to dashboard
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       navigate(user.role === 'admin' ? '/admin/dashboard' : '/dashboard', { replace: true });
     }
   }, [user, navigate]);

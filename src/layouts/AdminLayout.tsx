@@ -20,10 +20,11 @@ const adminNav = [
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, logout, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
+  if (loading) return <div className="flex min-h-screen items-center justify-center"><div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" /></div>;
   if (!user) return <Navigate to="/login" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
