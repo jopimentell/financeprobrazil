@@ -191,7 +191,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
   }, [isAdmin]);
 
   const confirmImpersonation = useCallback((password: string, reason?: string): { success: boolean; error?: string } => {
-    if (!pendingTarget || !realUser) return { success: false, error: 'Estado inválido' };
+    if (!pendingTarget || !adminId) return { success: false, error: 'Estado inválido' };
 
     if (isLocked) {
       return { success: false, error: `Bloqueado. Tente novamente em ${lockRemainingSeconds}s` };
