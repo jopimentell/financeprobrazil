@@ -7,56 +7,66 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 export default function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { login, register } = useAuth();
+  const { login, register, user, isAdmin } = useAuth();
   const initialMode = (searchParams.get('mode') as 'login' | 'register') || 'login';
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const m = searchParams.get('mode');
     if (m === 'register' || m === 'login') setMode(m);
   }, [searchParams]);
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate(isAdmin ? '/admin/dashboard' : '/dashboard', { replace: true });
+    }
+  }, [user, isAdmin, navigate]);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { toast.error('Preencha todos os campos'); return; }
-    const success = login(email, password);
+    setSubmitting(true);
+    const success = await login(email, password);
+    setSubmitting(false);
     if (success) {
       toast.success('Login realizado com sucesso!');
-      // Check user role to redirect appropriately
-      const users = JSON.parse(localStorage.getItem('finance_users') || '[]');
-      const loggedUser = users.find((u: any) => u.email === email);
-      if (loggedUser?.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      // Navigation handled by useEffect above
     } else {
       toast.error('Email ou senha incorretos');
     }
   };
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !email || !password || !confirmPassword) { toast.error('Preencha todos os campos'); return; }
     if (password.length < 8) { toast.error('Senha deve ter no mínimo 8 caracteres'); return; }
     if (password !== confirmPassword) { toast.error('Senhas não conferem'); return; }
-    const success = register(name, email, password);
+    setSubmitting(true);
+    const success = await register(name, email, password);
+    setSubmitting(false);
     if (success) {
-      toast.success('Conta criada com sucesso!');
-      navigate('/dashboard');
+      toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
+      // Navigation handled by useEffect above once session is established
     } else {
-      toast.error('Este email já está cadastrado');
+      toast.error('Erro ao criar conta. Tente novamente.');
     }
   };
 
-  const handleForgot = (e: React.FormEvent) => {
+  const handleForgot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) { toast.error('Digite seu email'); return; }
+    const { supabase } = await import('@/integrations/supabase/client');
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
     toast.success('Link de recuperação enviado para seu email');
     setMode('login');
   };
@@ -98,15 +108,15 @@ export default function Login() {
                   </button>
                 </div>
               </div>
-              <button type="submit" className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
-                Entrar
+              <button type="submit" disabled={submitting}
+                className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+                {submitting ? 'Entrando...' : 'Entrar'}
               </button>
             </form>
             <div className="flex justify-between mt-4">
               <button onClick={() => setMode('forgot')} className="text-sm text-primary hover:underline">Esqueci minha senha</button>
               <button onClick={() => setMode('register')} className="text-sm text-primary hover:underline">Criar conta</button>
             </div>
-          
           </>
         )}
 
@@ -134,8 +144,9 @@ export default function Login() {
                 <input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
                   className="input-field" placeholder="Repita a senha" />
               </div>
-              <button type="submit" className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity">
-                Criar Conta
+              <button type="submit" disabled={submitting}
+                className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity disabled:opacity-50">
+                {submitting ? 'Criando...' : 'Criar Conta'}
               </button>
             </form>
             <button onClick={() => setMode('login')} className="w-full mt-4 text-sm text-primary hover:underline">
