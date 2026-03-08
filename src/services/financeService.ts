@@ -282,19 +282,75 @@ export function deleteCreditCardExpense(userId: string, id: string): void {
   const expenses = getCreditCardExpenses(userId);
   const expense = expenses.find(e => e.id === id);
   if (!expense) return;
-  // Delete all related installments
   const parentId = expense.parentExpenseId || expense.id;
   db.updateUserEntity(userId, 'creditCardExpenses', prev =>
     (prev || []).filter(e => e.id !== parentId && e.parentExpenseId !== parentId)
   );
 }
 
+export function updateCreditCardExpense(userId: string, id: string, updates: Partial<CreditCardExpense>): void {
+  db.updateUserEntity(userId, 'creditCardExpenses', prev =>
+    (prev || []).map(e => e.id === id ? { ...e, ...updates } : e)
+  );
+}
+
+// ── Paid Invoices ─────────────────────────────────────
+
+export function getPaidInvoices(userId: string): PaidInvoice[] {
+  return db.getUserData(userId).paidInvoices || [];
+}
+
+export function markInvoicePaid(
+  userId: string,
+  cardId: string,
+  month: string,
+  amount: number,
+  categoryId: string,
+  accountId: string,
+): { paidInvoice: PaidInvoice; transaction: Transaction } {
+  const txId = uid();
+  const card = getCreditCards(userId).find(c => c.id === cardId);
+  const cardName = card?.name || 'Cartão';
+
+  // Create expense transaction for the invoice payment
+  const tx: Transaction = {
+    id: txId,
+    userId,
+    description: `Pagamento fatura ${cardName} - ${month}`,
+    amount,
+    type: 'expense',
+    categoryId,
+    accountId,
+    date: new Date().toISOString().split('T')[0],
+    status: 'paid',
+    recurrence: 'none',
+    origin: 'manual',
+  };
+  db.updateUserEntity(userId, 'transactions', prev => [...prev, tx]);
+
+  const paid: PaidInvoice = {
+    cardId,
+    month,
+    paidAt: new Date().toISOString(),
+    amount,
+    transactionId: txId,
+  };
+  db.updateUserEntity(userId, 'paidInvoices', prev => [...(prev || []), paid]);
+
+  return { paidInvoice: paid, transaction: tx };
+}
+
 /**
- * Compute invoices for a credit card based on its expenses and closing day.
+ * Compute invoices for a credit card with proper status logic including overdue and paid.
  */
-export function computeInvoices(card: CreditCard, expenses: CreditCardExpense[]): import('@/types/finance').CreditCardInvoice[] {
+export function computeInvoices(
+  card: CreditCard,
+  expenses: CreditCardExpense[],
+  paidInvoices?: PaidInvoice[],
+): import('@/types/finance').CreditCardInvoice[] {
   const now = new Date();
   const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const paidMap = new Set((paidInvoices || []).filter(p => p.cardId === card.id).map(p => p.month));
 
   // Group expenses into invoice months based on closing day
   const grouped: Record<string, CreditCardExpense[]> = {};
@@ -313,16 +369,30 @@ export function computeInvoices(card: CreditCard, expenses: CreditCardExpense[])
 
   return Object.entries(grouped)
     .map(([month, exps]) => {
-      let status: 'open' | 'closed' | 'paid' | 'future';
-      if (month < currentKey) status = 'closed';
-      else if (month === currentKey) status = 'open';
-      else status = 'future';
+      const [y, m] = month.split('-').map(Number);
+      const dueDate = new Date(y, m - 1, card.dueDay);
+      const dueDateStr = dueDate.toISOString().split('T')[0];
+
+      let status: 'open' | 'closed' | 'overdue' | 'paid' | 'future';
+      if (paidMap.has(month)) {
+        status = 'paid';
+      } else if (month > currentKey) {
+        status = 'future';
+      } else if (month === currentKey) {
+        // Current month: open if before closing day, closed if after
+        status = now.getDate() <= card.closingDay ? 'open' : 'closed';
+      } else {
+        // Past month not paid
+        status = dueDate < now ? 'overdue' : 'closed';
+      }
+
       return {
         cardId: card.id,
         month,
         total: exps.reduce((s, e) => s + e.amount, 0),
         status,
         expenses: exps.sort((a, b) => a.purchaseDate.localeCompare(b.purchaseDate)),
+        dueDate: dueDateStr,
       };
     })
     .sort((a, b) => a.month.localeCompare(b.month));
