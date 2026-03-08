@@ -48,7 +48,7 @@ export function TransactionModal({ open, onClose, transaction, defaultType }: Tr
     }
     const data = { ...form, amount: parseFloat(form.amount) };
     if (isEdit) {
-      updateTransaction({ ...data, id: transaction.id });
+      updateTransaction({ ...data, id: transaction.id, userId: transaction.userId });
       toast.success('Transação atualizada');
     } else {
       addTransaction(data);

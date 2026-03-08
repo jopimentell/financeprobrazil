@@ -25,7 +25,7 @@ export default function Investments() {
     const invested = parseFloat(form.investedAmount);
     const current = parseFloat(form.currentValue) || invested;
     const data = { name: form.name, type: form.type, investedAmount: invested, currentValue: current, profit: current - invested };
-    if (editing) { updateInvestment({ ...data, id: editing.id }); toast.success('Investimento atualizado'); }
+    if (editing) { updateInvestment({ ...data, id: editing.id, userId: editing.userId }); toast.success('Investimento atualizado'); }
     else { addInvestment(data); toast.success('Investimento adicionado'); }
     setModalOpen(false);
   };
