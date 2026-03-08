@@ -208,7 +208,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
       catch { return {}; }
     })();
 
-    if (passwords[realUser.email] !== password) {
+    if (passwords[adminEmail] !== password) {
       const newAttempts = failedAttempts + 1;
       setFailedAttempts(newAttempts);
       addLog({ action: 'failed', userId: pendingTarget.id, userName: pendingTarget.name, reason: `Senha incorreta (tentativa ${newAttempts}/${MAX_FAILED_ATTEMPTS})` });
