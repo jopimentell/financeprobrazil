@@ -86,6 +86,26 @@ export default function Dashboard() {
   const incomeTrend = !annualView && prevIncome > 0 ? ((income - prevIncome) / prevIncome) * 100 : null;
   const expenseTrend = !annualView && prevExpense > 0 ? ((expense - prevExpense) / prevExpense) * 100 : null;
 
+  // Credit card invoice summary
+  const ccSummary = useMemo(() => {
+    if (creditCards.length === 0) return null;
+    let openTotal = 0;
+    let closedTotal = 0;
+    let overdueTotal = 0;
+    let futureTotal = 0;
+    creditCards.forEach(card => {
+      const exps = creditCardExpenses.filter(e => e.cardId === card.id);
+      const invs = computeInvoices(card, exps, paidInvoices);
+      invs.forEach(inv => {
+        if (inv.status === 'open') openTotal += inv.total;
+        else if (inv.status === 'closed') closedTotal += inv.total;
+        else if (inv.status === 'overdue') overdueTotal += inv.total;
+        else if (inv.status === 'future') futureTotal += inv.total;
+      });
+    });
+    return { openTotal, closedTotal, overdueTotal, futureTotal };
+  }, [creditCards, creditCardExpenses, paidInvoices]);
+
   const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Future installment expenses (parcelas futuras)
