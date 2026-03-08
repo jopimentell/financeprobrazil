@@ -1,3 +1,25 @@
+// ===== Feature Definition =====
+export interface Feature {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  category: FeatureCategory;
+}
+
+export type FeatureCategory =
+  | 'finance'
+  | 'accounts'
+  | 'limits'
+  | 'reports'
+  | 'analytics'
+  | 'planning'
+  | 'productivity'
+  | 'imports'
+  | 'customization'
+  | 'security';
+
+// ===== Plan =====
 export interface Plan {
   id: string;
   name: string;
@@ -11,18 +33,25 @@ export interface Plan {
   color?: string;
 }
 
+// ===== Plan ↔ Feature relation =====
+export interface PlanFeatureRelation {
+  id: string;
+  planId: string;
+  featureKey: string;
+  enabled: boolean;
+}
+
+// ===== Plan Limits =====
 export interface PlanLimits {
   id: string;
   planId: string;
-  maxAccounts: number; // -1 = unlimited
-  maxTransactionsPerMonth: number; // -1 = unlimited
-  maxCategories: number; // -1 = unlimited
-  maxGoals: number; // -1 = unlimited
-  allowExports: boolean;
-  allowReports: boolean;
-  allowAdvancedAnalytics: boolean;
+  maxAccounts: number;        // -1 = unlimited
+  maxTransactionsPerMonth: number;
+  maxCategories: number;
+  maxGoals: number;
 }
 
+// ===== Subscription =====
 export interface Subscription {
   id: string;
   userId: string;
@@ -34,17 +63,19 @@ export interface Subscription {
   createdAt: string;
 }
 
+// ===== System Settings =====
 export interface PlanSystemSettings {
   monetizationEnabled: boolean;
   defaultPlanId: string;
 }
 
-export type PlanFeature = 'accounts' | 'transactions' | 'categories' | 'goals' | 'exports' | 'reports' | 'advanced_analytics';
+// ===== Limit check =====
+export type LimitKey = 'accounts' | 'transactions' | 'categories' | 'goals';
 
 export interface LimitCheckResult {
   allowed: boolean;
   current: number;
-  limit: number; // -1 = unlimited
-  feature: PlanFeature;
+  limit: number;
+  limitKey: LimitKey;
   planName: string;
 }
