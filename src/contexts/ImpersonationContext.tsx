@@ -238,6 +238,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     setAllSessions(prev => [...prev, newSession]);
     setRemainingTime(IMPERSONATION_TIMEOUT_MS / 1000);
     setPendingTarget(null);
+    authStartImpersonation(pendingTarget.id); // Sync with AuthContext for data scoping
     check24hAlert();
 
     return { success: true };
