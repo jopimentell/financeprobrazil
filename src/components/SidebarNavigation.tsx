@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, CalendarDays, Tag, Wallet,
   CreditCard, TrendingUp, LineChart, FileBarChart, Target, Menu, X, ChevronLeft,
-  ArrowDownCircle, ArrowUpCircle
+  ArrowDownCircle, ArrowUpCircle, Crown
 } from 'lucide-react';
 import { useState } from 'react';
 
