@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { usePlan } from '@/contexts/PlanContext';
 import { Check, X, Sparkles, Zap, Crown } from 'lucide-react';
 import { toast } from 'sonner';
