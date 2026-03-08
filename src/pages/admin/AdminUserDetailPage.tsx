@@ -51,10 +51,15 @@ export default function AdminUserDetailPage() {
   }
 
   const handleBlock = () => {
+    if (targetUser.id === currentUser?.id) {
+      toast.error('Você não pode desativar sua própria conta.');
+      return;
+    }
     toggleUserStatus(targetUser.id);
     const action = targetUser.status === 'active' ? 'bloqueou' : 'desbloqueou';
-    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: `${action} usuário`, targetUserId: targetUser.id, targetUserName: targetUser.name });
-    toast.success(`Usuário ${targetUser.status === 'active' ? 'bloqueado' : 'desbloqueado'}`);
+    const label = targetUser.role === 'admin' ? 'admin' : 'usuário';
+    addLog({ adminId: currentUser!.id, adminName: currentUser!.name, action: `${action} ${label}`, targetUserId: targetUser.id, targetUserName: targetUser.name });
+    toast.success(`${targetUser.role === 'admin' ? 'Admin' : 'Usuário'} ${targetUser.status === 'active' ? 'desativado' : 'reativado'}`);
   };
 
   const handleDelete = () => {
