@@ -164,6 +164,41 @@ export default function Dashboard() {
             </div>
           </DashboardSortableCard>
         );
+      case 'forecast-installments':
+        if (futureInstallments.length === 0 || annualView) return null;
+        return (
+          <DashboardSortableCard id="forecast-installments" key="forecast-installments" className="col-span-full">
+            <div className="finance-card">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarClock className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-muted-foreground">Despesas Previstas (Parcelas Futuras)</h3>
+                <span className="ml-auto text-lg font-bold text-destructive">
+                  R$ {futureInstallmentTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {futureByMonth.map(group => (
+                  <div key={group.label} className="border border-border/50 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">{group.label}</span>
+                      <span className="text-sm font-semibold text-destructive">
+                        R$ {group.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {group.items.map(tx => (
+                        <div key={tx.id} className="flex justify-between text-xs text-muted-foreground">
+                          <span>{tx.description}</span>
+                          <span>R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </DashboardSortableCard>
+        );
       case 'charts':
         if (isEmpty) return null;
         return (
