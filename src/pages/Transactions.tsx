@@ -29,10 +29,16 @@ export default function Transactions() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Transações</h1>
-        <button onClick={() => { setEditTx(null); setModalOpen(true); }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus className="h-4 w-4" /> Nova Transação
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setImportOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-input bg-background text-sm font-medium hover:bg-accent transition-colors">
+            <Upload className="h-4 w-4" /> Importar Extrato
+          </button>
+          <button onClick={() => { setEditTx(null); setModalOpen(true); }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus className="h-4 w-4" /> Nova Transação
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
