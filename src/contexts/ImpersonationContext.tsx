@@ -133,7 +133,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     const log: ImpersonationLog = {
       id: crypto.randomUUID(),
       adminId: partial.adminId || adminId,
-      adminName: partial.adminName || realUser?.name || '',
+      adminName: partial.adminName || adminName,
       userId: partial.userId || pendingTarget?.id || session?.userId || '',
       userName: partial.userName || pendingTarget?.name || session?.userName || '',
       action: partial.action,
