@@ -67,6 +67,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [debts, setDebts] = useState<Debt[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
   const [forecast, setForecast] = useState<Forecast[]>([]);
+  const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
+  const [creditCardExpenses, setCreditCardExpenses] = useState<CreditCardExpense[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => financeService.getSystemLogs());
 
   const loadedUserRef = useRef<string>('');
