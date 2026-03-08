@@ -1,13 +1,13 @@
 import { MobileMenuDrawer } from './SidebarNavigation';
 import { useFinance } from '@/contexts/FinanceContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Cloud, LogOut, User, Shield } from 'lucide-react';
+import { Cloud, LogOut, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 export function HeaderBar() {
   const { syncToSheet } = useFinance();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleSync = () => {
@@ -35,7 +35,7 @@ export function HeaderBar() {
           <div className="flex items-center gap-2 pl-2 border-l border-border">
             <div className="hidden sm:flex items-center gap-1.5">
               <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-                {isAdmin ? <Shield className="h-3.5 w-3.5 text-primary" /> : <User className="h-3.5 w-3.5 text-primary" />}
+                <User className="h-3.5 w-3.5 text-primary" />
               </div>
               <span className="text-sm font-medium text-foreground max-w-[120px] truncate">{user.name}</span>
             </div>

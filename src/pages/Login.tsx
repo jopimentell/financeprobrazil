@@ -20,7 +20,14 @@ export default function Login() {
     const success = login(email, password);
     if (success) {
       toast.success('Login realizado com sucesso!');
-      navigate('/dashboard');
+      // Check user role to redirect appropriately
+      const users = JSON.parse(localStorage.getItem('finance_users') || '[]');
+      const loggedUser = users.find((u: any) => u.email === email);
+      if (loggedUser?.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     } else {
       toast.error('Email ou senha incorretos');
     }
