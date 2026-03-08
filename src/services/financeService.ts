@@ -86,6 +86,56 @@ export function getDebts(userId: string): Debt[] {
   return db.getUserData(userId).debts;
 }
 
+/**
+ * Creates a debt and auto-generates installment expense transactions.
+ * Each installment is linked via `parcelamentoId` = debt.id.
+ * Returns the debt and the generated transactions.
+ */
+export function addDebtWithInstallments(
+  userId: string,
+  d: Omit<Debt, 'id' | 'userId'>,
+  categoryId: string,
+  accountId: string,
+): { debt: Debt; installments: Transaction[] } {
+  const debtId = uid();
+  const newDebt: Debt = { ...d, id: debtId, userId };
+  db.updateUserEntity(userId, 'debts', prev => [...prev, newDebt]);
+
+  const numInstallments = d.installments || 1;
+  const installmentAmount = Math.round((d.totalAmount / numInstallments) * 100) / 100;
+  const startDate = new Date(d.dueDate);
+  const now = new Date();
+  const generatedTxs: Transaction[] = [];
+
+  for (let i = 0; i < numInstallments; i++) {
+    const txDate = new Date(startDate);
+    txDate.setMonth(txDate.getMonth() + i);
+    const isPastOrCurrent = txDate <= now || (txDate.getFullYear() === now.getFullYear() && txDate.getMonth() === now.getMonth());
+
+    const tx: Transaction = {
+      id: uid(),
+      userId,
+      description: `${d.creditor} (${i + 1}/${numInstallments})`,
+      amount: installmentAmount,
+      type: 'expense',
+      categoryId,
+      accountId,
+      date: txDate.toISOString().split('T')[0],
+      status: isPastOrCurrent ? 'pending' : 'pending',
+      recurrence: 'none',
+      parcelamentoId: debtId,
+      origin: 'parcelamento',
+      parcelaAtual: i + 1,
+      totalParcelas: numInstallments,
+    };
+    generatedTxs.push(tx);
+  }
+
+  db.updateUserEntity(userId, 'transactions', prev => [...prev, ...generatedTxs]);
+  return { debt: newDebt, installments: generatedTxs };
+}
+
+/** Legacy addDebt without installment generation */
 export function addDebt(userId: string, d: Omit<Debt, 'id' | 'userId'>): Debt {
   const newDebt: Debt = { ...d, id: uid(), userId };
   db.updateUserEntity(userId, 'debts', prev => [...prev, newDebt]);
@@ -96,8 +146,22 @@ export function updateDebt(userId: string, d: Debt): void {
   db.updateUserEntity(userId, 'debts', prev => prev.map(x => x.id === d.id ? d : x));
 }
 
+/**
+ * Deletes a debt and removes all future installment transactions.
+ * Past/current month installments are kept.
+ */
 export function deleteDebt(userId: string, id: string): void {
   db.updateUserEntity(userId, 'debts', prev => prev.filter(x => x.id !== id));
+  const now = new Date();
+  const currentMonth = now.getFullYear() * 12 + now.getMonth();
+  db.updateUserEntity(userId, 'transactions', prev =>
+    prev.filter(tx => {
+      if (tx.parcelamentoId !== id) return true;
+      const txDate = new Date(tx.date);
+      const txMonth = txDate.getFullYear() * 12 + txDate.getMonth();
+      return txMonth <= currentMonth; // keep past/current, remove future
+    })
+  );
 }
 
 // ── Investments ────────────────────────────────────────

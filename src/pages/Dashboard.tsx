@@ -10,7 +10,7 @@ import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { EmptyState } from '@/components/EmptyState';
 import { DashboardSortableCard } from '@/components/DashboardSortableCard';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import {
   DndContext,
@@ -29,7 +29,7 @@ import {
 
 const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
-const DEFAULT_LAYOUT = ['metrics', 'charts', 'pending', 'annual-table', 'recent-transactions'];
+const DEFAULT_LAYOUT = ['metrics', 'forecast-installments', 'charts', 'pending', 'annual-table', 'recent-transactions'];
 
 function loadLayout(userId: string): string[] {
   try {
@@ -48,7 +48,7 @@ export default function Dashboard() {
   const now = new Date();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getMonthTransactions, getYearTransactions } = useFinance();
+  const { getMonthTransactions, getYearTransactions, transactions: allUserTx } = useFinance();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [annualView, setAnnualView] = useState(false);
@@ -86,6 +86,35 @@ export default function Dashboard() {
   const expenseTrend = !annualView && prevExpense > 0 ? ((expense - prevExpense) / prevExpense) * 100 : null;
 
   const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // Future installment expenses (parcelas futuras)
+  const futureInstallments = useMemo(() => {
+    const now = new Date();
+    const currentMonthKey = now.getFullYear() * 12 + now.getMonth();
+    return allUserTx.filter(tx => {
+      if (tx.origin !== 'parcelamento') return false;
+      const txDate = new Date(tx.date);
+      const txMonthKey = txDate.getFullYear() * 12 + txDate.getMonth();
+      return txMonthKey > currentMonthKey;
+    });
+  }, [allUserTx]);
+
+  const futureInstallmentTotal = futureInstallments.reduce((s, t) => s + t.amount, 0);
+
+  // Group future installments by month for preview
+  const futureByMonth = useMemo(() => {
+    const grouped: Record<string, { label: string; total: number; items: typeof futureInstallments }> = {};
+    futureInstallments.forEach(tx => {
+      const d = new Date(tx.date);
+      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      if (!grouped[key]) {
+        grouped[key] = { label: `${monthNames[d.getMonth()]} ${d.getFullYear()}`, total: 0, items: [] };
+      }
+      grouped[key].total += tx.amount;
+      grouped[key].items.push(tx);
+    });
+    return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label)).slice(0, 6);
+  }, [futureInstallments]);
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -132,6 +161,41 @@ export default function Dashboard() {
                 title="Resultado" value={balance} icon={Wallet}
                 type={balance >= 0 ? 'income' : 'expense'}
               />
+            </div>
+          </DashboardSortableCard>
+        );
+      case 'forecast-installments':
+        if (futureInstallments.length === 0 || annualView) return null;
+        return (
+          <DashboardSortableCard id="forecast-installments" key="forecast-installments" className="col-span-full">
+            <div className="finance-card">
+              <div className="flex items-center gap-2 mb-4">
+                <CalendarClock className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-medium text-muted-foreground">Despesas Previstas (Parcelas Futuras)</h3>
+                <span className="ml-auto text-lg font-bold text-destructive">
+                  R$ {futureInstallmentTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="space-y-3">
+                {futureByMonth.map(group => (
+                  <div key={group.label} className="border border-border/50 rounded-lg p-3">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm font-medium">{group.label}</span>
+                      <span className="text-sm font-semibold text-destructive">
+                        R$ {group.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {group.items.map(tx => (
+                        <div key={tx.id} className="flex justify-between text-xs text-muted-foreground">
+                          <span>{tx.description}</span>
+                          <span>R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </DashboardSortableCard>
         );

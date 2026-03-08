@@ -181,10 +181,16 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setAccounts(prev => prev.filter(x => x.id !== id));
   }, [currentUserId]);
 
-  const addDebt = useCallback((d: Omit<Debt, 'id' | 'userId'>) => {
-    const newDebt = financeService.addDebt(currentUserId, d);
+  const addDebt = useCallback((d: Omit<Debt, 'id' | 'userId'> & { categoryId?: string; accountId?: string }) => {
+    const categoryId = d.categoryId || categories.find(c => c.type === 'expense')?.id || '';
+    const accountId = d.accountId || accounts[0]?.id || '';
+    const { debt: newDebt, installments } = financeService.addDebtWithInstallments(
+      currentUserId, d, categoryId, accountId
+    );
     setDebts(prev => [...prev, newDebt]);
-  }, [currentUserId]);
+    setTransactions(prev => [...prev, ...installments]);
+    addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'create_debt', entity: 'debt', details: `${d.creditor} - ${d.installments} parcelas` });
+  }, [currentUserId, categories, accounts, user?.name, addSystemLogFn]);
 
   const updateDebt = useCallback((d: Debt) => {
     financeService.updateDebt(currentUserId, d);
@@ -194,7 +200,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const deleteDebt = useCallback((id: string) => {
     financeService.deleteDebt(currentUserId, id);
     setDebts(prev => prev.filter(x => x.id !== id));
-  }, [currentUserId]);
+    // Reload transactions to reflect removed future installments
+    const data = db.getUserData(currentUserId);
+    setTransactions(data.transactions);
+    addSystemLogFn({ userId: currentUserId, userName: user?.name || '', action: 'delete_debt', entity: 'debt', entityId: id });
+  }, [currentUserId, user?.name, addSystemLogFn]);
 
   const addInvestment = useCallback((i: Omit<Investment, 'id' | 'userId'>) => {
     const newInv = financeService.addInvestment(currentUserId, i);

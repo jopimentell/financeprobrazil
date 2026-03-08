@@ -11,6 +11,14 @@ export interface Transaction {
   recurrence: 'none' | 'monthly' | 'yearly';
   installments?: number;
   notes?: string;
+  /** Links installment transactions to the originating debt */
+  parcelamentoId?: string;
+  /** Origin of the transaction */
+  origin?: 'manual' | 'parcelamento';
+  /** Current installment number (e.g. 1 of 10) */
+  parcelaAtual?: number;
+  /** Total installments in the series */
+  totalParcelas?: number;
 }
 
 export interface Category {
