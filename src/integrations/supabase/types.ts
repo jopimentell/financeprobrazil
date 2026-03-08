@@ -14,16 +14,465 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      accounts: {
+        Row: {
+          balance: number
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["account_type"]
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          id?: string
+          name: string
+          type?: Database["public"]["Enums"]["account_type"]
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["account_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          color: string
+          id: string
+          name: string
+          type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          id?: string
+          name: string
+          type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Update: {
+          color?: string
+          id?: string
+          name?: string
+          type?: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_card_expenses: {
+        Row: {
+          amount: number
+          card_id: string
+          category: string
+          current_installment: number | null
+          description: string
+          id: string
+          installments: number | null
+          parent_expense_id: string | null
+          purchase_date: string
+          total_installments: number | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          card_id: string
+          category?: string
+          current_installment?: number | null
+          description: string
+          id?: string
+          installments?: number | null
+          parent_expense_id?: string | null
+          purchase_date?: string
+          total_installments?: number | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string
+          category?: string
+          current_installment?: number | null
+          description?: string
+          id?: string
+          installments?: number | null
+          parent_expense_id?: string | null
+          purchase_date?: string
+          total_installments?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_card_expenses_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_cards: {
+        Row: {
+          closing_day: number
+          created_at: string
+          due_day: number
+          id: string
+          limit: number
+          name: string
+          user_id: string
+        }
+        Insert: {
+          closing_day?: number
+          created_at?: string
+          due_day?: number
+          id?: string
+          limit?: number
+          name: string
+          user_id: string
+        }
+        Update: {
+          closing_day?: number
+          created_at?: string
+          due_day?: number
+          id?: string
+          limit?: number
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      debts: {
+        Row: {
+          creditor: string
+          due_date: string
+          id: string
+          installments: number
+          interest_rate: number
+          paid_installments: number
+          remaining_amount: number
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          creditor: string
+          due_date?: string
+          id?: string
+          installments?: number
+          interest_rate?: number
+          paid_installments?: number
+          remaining_amount?: number
+          total_amount?: number
+          user_id: string
+        }
+        Update: {
+          creditor?: string
+          due_date?: string
+          id?: string
+          installments?: number
+          interest_rate?: number
+          paid_installments?: number
+          remaining_amount?: number
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      forecast: {
+        Row: {
+          expected_expenses: number
+          expected_income: number
+          id: string
+          month: string
+          projected_balance: number
+          user_id: string
+        }
+        Insert: {
+          expected_expenses?: number
+          expected_income?: number
+          id?: string
+          month: string
+          projected_balance?: number
+          user_id: string
+        }
+        Update: {
+          expected_expenses?: number
+          expected_income?: number
+          id?: string
+          month?: string
+          projected_balance?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          current_value: number
+          id: string
+          invested_amount: number
+          name: string
+          profit: number
+          type: Database["public"]["Enums"]["investment_type"]
+          user_id: string
+        }
+        Insert: {
+          current_value?: number
+          id?: string
+          invested_amount?: number
+          name: string
+          profit?: number
+          type?: Database["public"]["Enums"]["investment_type"]
+          user_id: string
+        }
+        Update: {
+          current_value?: number
+          id?: string
+          invested_amount?: number
+          name?: string
+          profit?: number
+          type?: Database["public"]["Enums"]["investment_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      paid_invoices: {
+        Row: {
+          amount: number
+          card_id: string
+          id: string
+          month: string
+          paid_at: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          card_id: string
+          id?: string
+          month: string
+          paid_at?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string
+          id?: string
+          month?: string
+          paid_at?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paid_invoices_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paid_invoices_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          closing_day: number
+          created_at: string
+          currency: string
+          email: string
+          id: string
+          last_login: string
+          name: string
+          status: string
+        }
+        Insert: {
+          closing_day?: number
+          created_at?: string
+          currency?: string
+          email?: string
+          id: string
+          last_login?: string
+          name?: string
+          status?: string
+        }
+        Update: {
+          closing_day?: number
+          created_at?: string
+          currency?: string
+          email?: string
+          id?: string
+          last_login?: string
+          name?: string
+          status?: string
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          action: Database["public"]["Enums"]["log_action"]
+          details: string | null
+          entity: string | null
+          entity_id: string | null
+          id: string
+          timestamp: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["log_action"]
+          details?: string | null
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          timestamp?: string
+          user_id: string
+          user_name?: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["log_action"]
+          details?: string | null
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          timestamp?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          category_id: string | null
+          date: string
+          description: string
+          id: string
+          installments: number | null
+          notes: string | null
+          origin: Database["public"]["Enums"]["transaction_origin"] | null
+          parcela_atual: number | null
+          parcelamento_id: string | null
+          recurrence: Database["public"]["Enums"]["transaction_recurrence"]
+          status: Database["public"]["Enums"]["transaction_status"]
+          total_parcelas: number | null
+          type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          date?: string
+          description: string
+          id?: string
+          installments?: number | null
+          notes?: string | null
+          origin?: Database["public"]["Enums"]["transaction_origin"] | null
+          parcela_atual?: number | null
+          parcelamento_id?: string | null
+          recurrence?: Database["public"]["Enums"]["transaction_recurrence"]
+          status?: Database["public"]["Enums"]["transaction_status"]
+          total_parcelas?: number | null
+          type: Database["public"]["Enums"]["transaction_type"]
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          category_id?: string | null
+          date?: string
+          description?: string
+          id?: string
+          installments?: number | null
+          notes?: string | null
+          origin?: Database["public"]["Enums"]["transaction_origin"] | null
+          parcela_atual?: number | null
+          parcelamento_id?: string | null
+          recurrence?: Database["public"]["Enums"]["transaction_recurrence"]
+          status?: Database["public"]["Enums"]["transaction_status"]
+          total_parcelas?: number | null
+          type?: Database["public"]["Enums"]["transaction_type"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      account_type: "bank" | "wallet" | "credit_card"
+      app_role: "admin" | "moderator" | "user"
+      investment_type: "stocks" | "crypto" | "fixed_income"
+      log_action:
+        | "login"
+        | "logout"
+        | "register"
+        | "create_transaction"
+        | "delete_transaction"
+        | "update_transaction"
+        | "create_category"
+        | "delete_category"
+        | "create_account"
+        | "delete_account"
+        | "create_debt"
+        | "delete_debt"
+        | "create_investment"
+        | "delete_investment"
+        | "admin_action"
+      transaction_origin: "manual" | "parcelamento" | "importacao"
+      transaction_recurrence: "none" | "monthly" | "yearly"
+      transaction_status: "paid" | "pending"
+      transaction_type: "income" | "expense"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +599,31 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      account_type: ["bank", "wallet", "credit_card"],
+      app_role: ["admin", "moderator", "user"],
+      investment_type: ["stocks", "crypto", "fixed_income"],
+      log_action: [
+        "login",
+        "logout",
+        "register",
+        "create_transaction",
+        "delete_transaction",
+        "update_transaction",
+        "create_category",
+        "delete_category",
+        "create_account",
+        "delete_account",
+        "create_debt",
+        "delete_debt",
+        "create_investment",
+        "delete_investment",
+        "admin_action",
+      ],
+      transaction_origin: ["manual", "parcelamento", "importacao"],
+      transaction_recurrence: ["none", "monthly", "yearly"],
+      transaction_status: ["paid", "pending"],
+      transaction_type: ["income", "expense"],
+    },
   },
 } as const
