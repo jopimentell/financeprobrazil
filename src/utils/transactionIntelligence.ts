@@ -10,18 +10,19 @@ const INCOME_KEYWORDS = [
   'pix recebido', 'pix receb', 'pix crédito', 'pix credito',
   'transferência recebida', 'transferencia recebida',
   'ted recebida', 'doc recebido',
-  'depósito', 'deposito', 'crédito', 'credito em conta',
+  'depósito', 'deposito', 'crédito em conta', 'credito em conta',
   'rendimento', 'dividendo', 'cashback', 'reembolso', 'estorno',
   'salário', 'salario', 'pagamento recebido', 'venda',
-  'resgate', 'devolução', 'devoluç',
+  'resgate', 'devolução', 'devoluç', 'recebimento',
 ];
 
 const EXPENSE_KEYWORDS = [
   'pix enviado', 'pix envio', 'pix débito', 'pix debito',
   'transferência enviada', 'transferencia enviada',
   'ted enviada', 'doc enviado',
-  'débito', 'debito automático', 'débito automático',
-  'compra', 'pagamento de', 'pagamento fatura', 'boleto',
+  'compra no débito', 'compra no debito', 'compra cartao', 'compra cartão',
+  'débito automático', 'debito automatico',
+  'compra', 'pagamento de', 'pagamento fatura', 'pagamento efetuado', 'boleto',
   'saque', 'tarifa', 'taxa', 'anuidade', 'juros', 'multa',
   'iof', 'imposto',
 ];
