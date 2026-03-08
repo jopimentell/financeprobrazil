@@ -5,8 +5,14 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import ImpersonationModal from '@/components/ImpersonationModal';
-import { ArrowLeft, Lock, Unlock, Trash2, ChevronLeft, ChevronRight, UserCheck, Wallet, CreditCard, PiggyBank } from 'lucide-react';
+import { ArrowLeft, Lock, Unlock, Trash2, ChevronLeft, ChevronRight, UserCheck, Wallet, CreditCard, PiggyBank, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
