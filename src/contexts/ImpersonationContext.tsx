@@ -202,28 +202,31 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
       return { success: false, error: 'Limite de impersonações por hora atingido (máx. 10)' };
     }
 
-    // Verify admin password
-    const passwords = (() => {
-      try { return JSON.parse(localStorage.getItem('finance_passwords') || '{}'); }
-      catch { return {}; }
+    // Verify admin password via Supabase re-authentication
+    // Since we can't synchronously verify, we do it async but return optimistically
+    // For security, we verify by attempting to sign in again
+    (async () => {
+      const { error } = await import('@/integrations/supabase/client').then(m =>
+        m.supabase.auth.signInWithPassword({ email: adminEmail, password })
+      );
+      if (error) {
+        const newAttempts = failedAttempts + 1;
+        setFailedAttempts(newAttempts);
+        addLog({ action: 'failed', userId: pendingTarget.id, userName: pendingTarget.name, reason: `Senha incorreta (tentativa ${newAttempts}/${MAX_FAILED_ATTEMPTS})` });
+
+        if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+          const lockEnd = Date.now() + LOCK_DURATION_MS;
+          setLockUntil(lockEnd);
+          addLog({ action: 'blocked', userId: pendingTarget.id, userName: pendingTarget.name, reason: `Bloqueado por ${MAX_FAILED_ATTEMPTS} tentativas falhadas` });
+        }
+        // Revert impersonation
+        authStopImpersonation();
+        setSession(null);
+        setRemainingTime(0);
+      }
     })();
 
-    if (passwords[adminEmail] !== password) {
-      const newAttempts = failedAttempts + 1;
-      setFailedAttempts(newAttempts);
-      addLog({ action: 'failed', userId: pendingTarget.id, userName: pendingTarget.name, reason: `Senha incorreta (tentativa ${newAttempts}/${MAX_FAILED_ATTEMPTS})` });
-
-      if (newAttempts >= MAX_FAILED_ATTEMPTS) {
-        const lockEnd = Date.now() + LOCK_DURATION_MS;
-        setLockUntil(lockEnd);
-        addLog({ action: 'blocked', userId: pendingTarget.id, userName: pendingTarget.name, reason: `Bloqueado por ${MAX_FAILED_ATTEMPTS} tentativas falhadas` });
-        return { success: false, error: `Bloqueado por 15 minutos após ${MAX_FAILED_ATTEMPTS} tentativas` };
-      }
-
-      return { success: false, error: `Senha incorreta. ${MAX_FAILED_ATTEMPTS - newAttempts} tentativas restantes` };
-    }
-
-    // Password correct — start session
+    // Start session optimistically (will be reverted if password check fails)
     setFailedAttempts(0);
     const sessionId = crypto.randomUUID();
     const newSession: ImpersonationSession = {
@@ -248,11 +251,11 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     setAllSessions(prev => [...prev, newSession]);
     setRemainingTime(IMPERSONATION_TIMEOUT_MS / 1000);
     setPendingTarget(null);
-    authStartImpersonation(pendingTarget.id); // Sync with AuthContext for data scoping
+    authStartImpersonation(pendingTarget.id);
     check24hAlert();
 
     return { success: true };
-  }, [pendingTarget, adminId, adminName, adminEmail, failedAttempts, isLocked, isRateLimited, lockRemainingSeconds, addLog, check24hAlert, authStartImpersonation]);
+  }, [pendingTarget, adminId, adminName, adminEmail, failedAttempts, isLocked, isRateLimited, lockRemainingSeconds, addLog, check24hAlert, authStartImpersonation, authStopImpersonation]);
 
   const stopImpersonation = useCallback(() => {
     if (!session) return;
