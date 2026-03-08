@@ -185,10 +185,10 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
   const activeSessions = allSessions.filter(s => s.isActive);
 
   const requestImpersonation = useCallback((targetUser: User) => {
-    if (!isAdmin) return;
-    if (targetUser.role === 'admin') return; // Cannot impersonate admins
+    if (!isAdmin || !realUser) return;
+    // Role-based impersonation check is handled by canImpersonate in AuthContext
     setPendingTarget(targetUser);
-  }, [isAdmin]);
+  }, [isAdmin, realUser]);
 
   const confirmImpersonation = useCallback((password: string, reason?: string): { success: boolean; error?: string } => {
     if (!pendingTarget || !adminId) return { success: false, error: 'Estado inválido' };
