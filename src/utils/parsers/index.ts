@@ -11,8 +11,8 @@ export { parseBRNumber } from './numberUtils';
  * Detect bank from CSV/text content header.
  */
 export function detectBank(text: string): BankType {
+  if (isInterFormat(text)) return 'inter';
   const firstLines = text.split('\n').slice(0, 5).join('\n');
-  if (isInterFormat(firstLines)) return 'inter';
   if (isSantanderFormat(firstLines)) return 'santander';
   return 'generic';
 }
