@@ -462,14 +462,19 @@ export function ImportStatementModal({ open, onClose }: Props) {
                         {row.type === 'income' ? '+' : '-'}R$ {row.amount.toFixed(2)}
                       </td>
                       <td className="p-2">
-                        <select
-                          value={row.type}
-                          onChange={e => updateRow(i, 'type', e.target.value)}
-                          className="bg-transparent border-0 p-0 text-sm"
-                        >
-                          <option value="income">Receita</option>
-                          <option value="expense">Despesa</option>
-                        </select>
+                        <div className="flex items-center gap-1">
+                          <select
+                            value={row.type}
+                            onChange={e => updateRow(i, 'type', e.target.value)}
+                            className={`bg-transparent border-0 p-0 text-sm ${!row.typeConfirmed ? 'text-amber-600 font-medium' : ''}`}
+                          >
+                            <option value="income">Receita</option>
+                            <option value="expense">Despesa</option>
+                          </select>
+                          {!row.typeConfirmed && (
+                            <span title="Tipo não identificado automaticamente — confirme" className="text-amber-500">?</span>
+                          )}
+                        </div>
                       </td>
                       <td className="p-2">
                         <select
