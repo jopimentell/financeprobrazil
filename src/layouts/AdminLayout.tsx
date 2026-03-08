@@ -3,7 +3,7 @@ import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-d
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, Users, BarChart3, ShieldAlert, ChevronLeft,
-  LogOut, Menu, X, Shield, ScrollText, Settings, UserCheck
+  LogOut, Menu, X, Shield, ScrollText, Settings
 } from 'lucide-react';
 
 const adminNav = [
@@ -18,7 +18,7 @@ const adminNav = [
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, isAdmin, logout, impersonating, stopImpersonation } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -118,17 +118,6 @@ export default function AdminLayout() {
             </div>
           </div>
         </header>
-        {impersonating && (
-          <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-amber-800">
-              <UserCheck className="h-4 w-4" />
-              <span>Visualizando como <strong>{impersonating.name}</strong></span>
-            </div>
-            <button onClick={stopImpersonation} className="text-xs px-2 py-1 rounded bg-amber-200 text-amber-800 hover:bg-amber-300 transition-colors font-medium">
-              Sair da visualização
-            </button>
-          </div>
-        )}
         <main className="flex-1 overflow-auto p-4 md:p-6">
           <Outlet />
         </main>
