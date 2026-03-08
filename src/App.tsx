@@ -38,6 +38,7 @@ import AdminCreatePage from "@/pages/admin/AdminCreatePage";
 import AdminSubscriptionsPage from "@/pages/admin/AdminSubscriptionsPage";
 import PlansPage from "@/pages/Plans";
 import SubscriptionPage from "@/pages/Subscription";
+import ProfilePage from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -77,6 +78,7 @@ const App = () => (
                     <Route path="/relatorios" element={<Reports />} />
                     <Route path="/plans" element={<PlansPage />} />
                     <Route path="/account/subscription" element={<SubscriptionPage />} />
+                    <Route path="/perfil" element={<ProfilePage />} />
                   </Route>
                   {/* Admin routes */}
                   <Route element={<AdminLayout />}>

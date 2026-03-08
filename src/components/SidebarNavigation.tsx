@@ -1,10 +1,12 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, CalendarDays, Tag, Wallet,
   CreditCard, TrendingUp, LineChart, FileBarChart, Target, Menu, X, ChevronLeft,
-  ArrowDownCircle, ArrowUpCircle, Crown
+  ArrowDownCircle, ArrowUpCircle, Crown, User, LogOut, Settings
 } from 'lucide-react';
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { Separator } from '@/components/ui/separator';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -88,6 +90,14 @@ export function MobileBottomNavigation() {
 export function MobileMenuDrawer() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    setOpen(false);
+    logout();
+    navigate('/login');
+  };
 
   return (
     <>
@@ -97,7 +107,7 @@ export function MobileMenuDrawer() {
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <div className="absolute inset-0 bg-foreground/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-0 bottom-0 w-72 bg-card p-4 animate-fade-in shadow-xl">
+          <div className="absolute left-0 top-0 bottom-0 w-72 bg-card p-4 animate-fade-in shadow-xl flex flex-col">
             <div className="flex justify-between items-center mb-6">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
@@ -107,7 +117,7 @@ export function MobileMenuDrawer() {
               </div>
               <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-accent"><X className="h-5 w-5" /></button>
             </div>
-            <nav className="space-y-0.5">
+            <nav className="space-y-0.5 flex-1 overflow-y-auto">
               {navItems.map(item => {
                 const active = location.pathname === item.path;
                 return (
@@ -124,6 +134,25 @@ export function MobileMenuDrawer() {
                 );
               })}
             </nav>
+            <Separator className="my-3" />
+            <div className="space-y-0.5">
+              <Link
+                to="/perfil"
+                onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                  ${location.pathname === '/perfil' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+              >
+                <User style={{ width: 18, height: 18 }} />
+                <span>Perfil</span>
+              </Link>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all w-full"
+              >
+                <LogOut style={{ width: 18, height: 18 }} />
+                <span>Sair</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
