@@ -106,11 +106,7 @@ export default function Login() {
               <button onClick={() => setMode('forgot')} className="text-sm text-primary hover:underline">Esqueci minha senha</button>
               <button onClick={() => setMode('register')} className="text-sm text-primary hover:underline">Criar conta</button>
             </div>
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center mb-2">Credenciais de teste:</p>
-              <p className="text-xs text-muted-foreground text-center">Admin: admin@financepro.com / admin123</p>
-              <p className="text-xs text-muted-foreground text-center">Usuário: joao@email.com / 12345678</p>
-            </div>
+          
           </>
         )}
 

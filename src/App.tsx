@@ -40,6 +40,7 @@ import PlansPage from "@/pages/Plans";
 import SubscriptionPage from "@/pages/Subscription";
 import ProfilePage from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
+import Welcome from "@/pages/Welcome";
 
 const queryClient = new QueryClient();
 
