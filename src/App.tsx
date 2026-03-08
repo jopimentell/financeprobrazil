@@ -32,6 +32,10 @@ import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import AdminSecurityPage from "@/pages/admin/AdminSecurityPage";
 import AdminLogsPage from "@/pages/admin/AdminLogsPage";
 import AdminSettingsPage from "@/pages/admin/AdminSettingsPage";
+import AdminPlansPage from "@/pages/admin/AdminPlansPage";
+import AdminSubscriptionsPage from "@/pages/admin/AdminSubscriptionsPage";
+import PlansPage from "@/pages/Plans";
+import SubscriptionPage from "@/pages/Subscription";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
