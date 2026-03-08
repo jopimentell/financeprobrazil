@@ -1,23 +1,20 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog } from '@/types/finance';
-import { defaultCategories, defaultAccounts, defaultTransactions, defaultDebts, defaultInvestments, defaultForecast, createDefaultCategories, createDefaultAccounts, createDefaultForecast } from '@/data/seedData';
+import { createDefaultCategories, createDefaultAccounts, createDefaultForecast } from '@/data/seedData';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface FinanceContextType {
-  // User-scoped (for regular pages)
   transactions: Transaction[];
   categories: Category[];
   accounts: Account[];
   debts: Debt[];
   investments: Investment[];
   forecast: Forecast[];
-  // All data (for admin)
   allTransactions: Transaction[];
   allCategories: Category[];
   allAccounts: Account[];
   allDebts: Debt[];
   allInvestments: Investment[];
-  // CRUD (auto-injects userId)
   addTransaction: (t: Omit<Transaction, 'id' | 'userId'>) => void;
   updateTransaction: (t: Transaction) => void;
   deleteTransaction: (id: string) => void;
@@ -40,125 +37,249 @@ interface FinanceContextType {
   getCategoryName: (id: string) => string;
   getAccountName: (id: string) => string;
   getCategoryColor: (id: string) => string;
-  // Admin helpers
   getUserTransactions: (userId: string) => Transaction[];
   getUserCategories: (userId: string) => Category[];
   getUserAccounts: (userId: string) => Account[];
   getUserDebts: (userId: string) => Debt[];
   getUserInvestments: (userId: string) => Investment[];
-  // System logs
   systemLogs: SystemLog[];
   addSystemLog: (log: Omit<SystemLog, 'id' | 'timestamp'>) => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
 
-function loadState<T>(key: string, fallback: T): T {
+// Per-user storage helpers
+function userKey(userId: string, entity: string) {
+  return `finance_user_${userId}_${entity}`;
+}
+
+function loadUserData<T>(userId: string, entity: string, fallback: T): T {
+  try {
+    const stored = localStorage.getItem(userKey(userId, entity));
+    return stored ? JSON.parse(stored) : fallback;
+  } catch { return fallback; }
+}
+
+function saveUserData(userId: string, entity: string, value: unknown) {
+  localStorage.setItem(userKey(userId, entity), JSON.stringify(value));
+}
+
+// Shared storage for system-wide data (logs)
+function loadShared<T>(key: string, fallback: T): T {
   try {
     const stored = localStorage.getItem(`finance_${key}`);
     return stored ? JSON.parse(stored) : fallback;
   } catch { return fallback; }
 }
-
-function saveState(key: string, value: unknown) {
+function saveShared(key: string, value: unknown) {
   localStorage.setItem(`finance_${key}`, JSON.stringify(value));
 }
 
 const uid = () => crypto.randomUUID();
 
+// Initialize a user's data if they have none yet
+function ensureUserData(userId: string): {
+  transactions: Transaction[];
+  categories: Category[];
+  accounts: Account[];
+  debts: Debt[];
+  investments: Investment[];
+  forecast: Forecast[];
+} {
+  const hasData = localStorage.getItem(userKey(userId, 'initialized'));
+
+  if (hasData) {
+    return {
+      transactions: loadUserData(userId, 'transactions', []),
+      categories: loadUserData(userId, 'categories', []),
+      accounts: loadUserData(userId, 'accounts', []),
+      debts: loadUserData(userId, 'debts', []),
+      investments: loadUserData(userId, 'investments', []),
+      forecast: loadUserData(userId, 'forecast', []),
+    };
+  }
+
+  // New user — create default categories, accounts, forecast; everything else empty
+  const categories = createDefaultCategories(userId);
+  const accounts = createDefaultAccounts(userId);
+  const forecast = createDefaultForecast(userId);
+  const transactions: Transaction[] = [];
+  const debts: Debt[] = [];
+  const investments: Investment[] = [];
+
+  saveUserData(userId, 'transactions', transactions);
+  saveUserData(userId, 'categories', categories);
+  saveUserData(userId, 'accounts', accounts);
+  saveUserData(userId, 'debts', debts);
+  saveUserData(userId, 'investments', investments);
+  saveUserData(userId, 'forecast', forecast);
+  localStorage.setItem(userKey(userId, 'initialized'), 'true');
+
+  return { transactions, categories, accounts, debts, investments, forecast };
+}
+
+// For admin: load all users' data by iterating known user IDs
+function loadAllUsersData(users: { id: string; role: string }[]) {
+  const allTx: Transaction[] = [];
+  const allCat: Category[] = [];
+  const allAcc: Account[] = [];
+  const allDbt: Debt[] = [];
+  const allInv: Investment[] = [];
+
+  for (const u of users) {
+    if (u.role === 'admin') continue; // admins don't have finance data
+    allTx.push(...loadUserData(u.id, 'transactions', []));
+    allCat.push(...loadUserData(u.id, 'categories', []));
+    allAcc.push(...loadUserData(u.id, 'accounts', []));
+    allDbt.push(...loadUserData(u.id, 'debts', []));
+    allInv.push(...loadUserData(u.id, 'investments', []));
+  }
+
+  return { allTx, allCat, allAcc, allDbt, allInv };
+}
+
 export function FinanceProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, users: allUsers } = useAuth();
   const currentUserId = user?.id || '';
   const isAdmin = user?.role === 'admin';
 
-  const [allTx, setAllTx] = useState<Transaction[]>(() => loadState('transactions', defaultTransactions));
-  const [allCat, setAllCat] = useState<Category[]>(() => loadState('categories', defaultCategories));
-  const [allAcc, setAllAcc] = useState<Account[]>(() => loadState('accounts', defaultAccounts));
-  const [allDbt, setAllDbt] = useState<Debt[]>(() => loadState('debts', defaultDebts));
-  const [allInv, setAllInv] = useState<Investment[]>(() => loadState('investments', defaultInvestments));
-  const [allFc, setAllFc] = useState<Forecast[]>(() => loadState('forecast', defaultForecast));
-  const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => loadState('system_logs', []));
+  // Per-user state
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [debts, setDebts] = useState<Debt[]>([]);
+  const [investments, setInvestments] = useState<Investment[]>([]);
+  const [forecast, setForecast] = useState<Forecast[]>([]);
+  const [systemLogs, setSystemLogs] = useState<SystemLog[]>(() => loadShared('system_logs', []));
 
-  useEffect(() => { saveState('transactions', allTx); }, [allTx]);
-  useEffect(() => { saveState('categories', allCat); }, [allCat]);
-  useEffect(() => { saveState('accounts', allAcc); }, [allAcc]);
-  useEffect(() => { saveState('debts', allDbt); }, [allDbt]);
-  useEffect(() => { saveState('investments', allInv); }, [allInv]);
-  useEffect(() => { saveState('forecast', allFc); }, [allFc]);
-  useEffect(() => { saveState('system_logs', systemLogs); }, [systemLogs]);
+  // Track which user's data is loaded
+  const loadedUserRef = useRef<string>('');
 
-  // Ensure new users get default data
+  // Load user data when currentUserId changes
   useEffect(() => {
-    if (!currentUserId || isAdmin) return;
-    const hasCategories = allCat.some(c => c.userId === currentUserId);
-    if (!hasCategories) {
-      setAllCat(prev => [...prev, ...createDefaultCategories(currentUserId)]);
-      setAllAcc(prev => [...prev, ...createDefaultAccounts(currentUserId)]);
-      setAllFc(prev => [...prev, ...createDefaultForecast(currentUserId)]);
+    if (!currentUserId || currentUserId === loadedUserRef.current) return;
+    loadedUserRef.current = currentUserId;
+
+    if (isAdmin) {
+      // Admin doesn't have own finance data — we'll compute aggregates in useMemo
+      setTransactions([]);
+      setCategories([]);
+      setAccounts([]);
+      setDebts([]);
+      setInvestments([]);
+      setForecast([]);
+      return;
     }
+
+    const data = ensureUserData(currentUserId);
+    setTransactions(data.transactions);
+    setCategories(data.categories);
+    setAccounts(data.accounts);
+    setDebts(data.debts);
+    setInvestments(data.investments);
+    setForecast(data.forecast);
   }, [currentUserId, isAdmin]);
 
-  // User-scoped data (default exports for pages)
-  const transactions = useMemo(() => isAdmin ? allTx : allTx.filter(t => t.userId === currentUserId), [allTx, currentUserId, isAdmin]);
-  const categories = useMemo(() => isAdmin ? allCat : allCat.filter(c => c.userId === currentUserId), [allCat, currentUserId, isAdmin]);
-  const accounts = useMemo(() => isAdmin ? allAcc : allAcc.filter(a => a.userId === currentUserId), [allAcc, currentUserId, isAdmin]);
-  const debts = useMemo(() => isAdmin ? allDbt : allDbt.filter(d => d.userId === currentUserId), [allDbt, currentUserId, isAdmin]);
-  const investments = useMemo(() => isAdmin ? allInv : allInv.filter(i => i.userId === currentUserId), [allInv, currentUserId, isAdmin]);
-  const forecast = useMemo(() => isAdmin ? allFc : allFc.filter(f => f.userId === currentUserId), [allFc, currentUserId, isAdmin]);
+  // Reset loaded ref on logout
+  useEffect(() => {
+    if (!currentUserId) loadedUserRef.current = '';
+  }, [currentUserId]);
+
+  // Persist per-user data on changes
+  useEffect(() => {
+    if (!currentUserId || isAdmin) return;
+    saveUserData(currentUserId, 'transactions', transactions);
+  }, [transactions, currentUserId, isAdmin]);
+
+  useEffect(() => {
+    if (!currentUserId || isAdmin) return;
+    saveUserData(currentUserId, 'categories', categories);
+  }, [categories, currentUserId, isAdmin]);
+
+  useEffect(() => {
+    if (!currentUserId || isAdmin) return;
+    saveUserData(currentUserId, 'accounts', accounts);
+  }, [accounts, currentUserId, isAdmin]);
+
+  useEffect(() => {
+    if (!currentUserId || isAdmin) return;
+    saveUserData(currentUserId, 'debts', debts);
+  }, [debts, currentUserId, isAdmin]);
+
+  useEffect(() => {
+    if (!currentUserId || isAdmin) return;
+    saveUserData(currentUserId, 'investments', investments);
+  }, [investments, currentUserId, isAdmin]);
+
+  useEffect(() => {
+    if (!currentUserId || isAdmin) return;
+    saveUserData(currentUserId, 'forecast', forecast);
+  }, [forecast, currentUserId, isAdmin]);
+
+  useEffect(() => { saveShared('system_logs', systemLogs); }, [systemLogs]);
+
+  // Admin aggregated data — computed from all users
+  const adminData = useMemo(() => {
+    if (!isAdmin) return null;
+    return loadAllUsersData(allUsers);
+  }, [isAdmin, allUsers, /* refresh when any user CRUD happens */ transactions]);
+
+  const allTransactions = isAdmin ? (adminData?.allTx || []) : transactions;
+  const allCategories = isAdmin ? (adminData?.allCat || []) : categories;
+  const allAccounts = isAdmin ? (adminData?.allAcc || []) : accounts;
+  const allDebts = isAdmin ? (adminData?.allDbt || []) : debts;
+  const allInvestments = isAdmin ? (adminData?.allInv || []) : investments;
 
   const addSystemLog = useCallback((log: Omit<SystemLog, 'id' | 'timestamp'>) => {
     setSystemLogs(prev => [{ ...log, id: uid(), timestamp: new Date().toISOString() }, ...prev].slice(0, 1000));
   }, []);
 
   const addTransaction = useCallback((t: Omit<Transaction, 'id' | 'userId'>) => {
-    setAllTx(prev => [...prev, { ...t, id: uid(), userId: currentUserId }]);
+    setTransactions(prev => [...prev, { ...t, id: uid(), userId: currentUserId }]);
     addSystemLog({ userId: currentUserId, userName: user?.name || '', action: 'create_transaction', entity: 'transaction', details: t.description });
   }, [currentUserId, user?.name, addSystemLog]);
 
   const updateTransaction = useCallback((t: Transaction) => {
-    setAllTx(prev => prev.map(x => x.id === t.id ? t : x));
+    setTransactions(prev => prev.map(x => x.id === t.id ? t : x));
   }, []);
 
   const deleteTransaction = useCallback((id: string) => {
-    setAllTx(prev => prev.filter(x => x.id !== id));
+    setTransactions(prev => prev.filter(x => x.id !== id));
     addSystemLog({ userId: currentUserId, userName: user?.name || '', action: 'delete_transaction', entity: 'transaction', entityId: id });
   }, [currentUserId, user?.name, addSystemLog]);
 
   const addCategory = useCallback((c: Omit<Category, 'id' | 'userId'>) => {
-    setAllCat(prev => [...prev, { ...c, id: uid(), userId: currentUserId }]);
+    setCategories(prev => [...prev, { ...c, id: uid(), userId: currentUserId }]);
     addSystemLog({ userId: currentUserId, userName: user?.name || '', action: 'create_category', entity: 'category', details: c.name });
   }, [currentUserId, user?.name, addSystemLog]);
 
-  const updateCategory = useCallback((c: Category) => setAllCat(prev => prev.map(x => x.id === c.id ? c : x)), []);
+  const updateCategory = useCallback((c: Category) => setCategories(prev => prev.map(x => x.id === c.id ? c : x)), []);
   const deleteCategory = useCallback((id: string) => {
-    setAllCat(prev => prev.filter(x => x.id !== id));
+    setCategories(prev => prev.filter(x => x.id !== id));
   }, []);
 
   const addAccount = useCallback((a: Omit<Account, 'id' | 'userId'>) => {
-    setAllAcc(prev => [...prev, { ...a, id: uid(), userId: currentUserId }]);
+    setAccounts(prev => [...prev, { ...a, id: uid(), userId: currentUserId }]);
   }, [currentUserId]);
 
-  const updateAccount = useCallback((a: Account) => setAllAcc(prev => prev.map(x => x.id === a.id ? a : x)), []);
-  const deleteAccount = useCallback((id: string) => setAllAcc(prev => prev.filter(x => x.id !== id)), []);
+  const updateAccount = useCallback((a: Account) => setAccounts(prev => prev.map(x => x.id === a.id ? a : x)), []);
+  const deleteAccount = useCallback((id: string) => setAccounts(prev => prev.filter(x => x.id !== id)), []);
 
   const addDebt = useCallback((d: Omit<Debt, 'id' | 'userId'>) => {
-    setAllDbt(prev => [...prev, { ...d, id: uid(), userId: currentUserId }]);
+    setDebts(prev => [...prev, { ...d, id: uid(), userId: currentUserId }]);
   }, [currentUserId]);
 
-  const updateDebt = useCallback((d: Debt) => setAllDbt(prev => prev.map(x => x.id === d.id ? d : x)), []);
-  const deleteDebt = useCallback((id: string) => setAllDbt(prev => prev.filter(x => x.id !== id)), []);
+  const updateDebt = useCallback((d: Debt) => setDebts(prev => prev.map(x => x.id === d.id ? d : x)), []);
+  const deleteDebt = useCallback((id: string) => setDebts(prev => prev.filter(x => x.id !== id)), []);
 
   const addInvestment = useCallback((i: Omit<Investment, 'id' | 'userId'>) => {
-    setAllInv(prev => [...prev, { ...i, id: uid(), userId: currentUserId }]);
+    setInvestments(prev => [...prev, { ...i, id: uid(), userId: currentUserId }]);
   }, [currentUserId]);
 
-  const updateInvestment = useCallback((i: Investment) => setAllInv(prev => prev.map(x => x.id === i.id ? i : x)), []);
-  const deleteInvestment = useCallback((id: string) => setAllInv(prev => prev.filter(x => x.id !== id)), []);
+  const updateInvestment = useCallback((i: Investment) => setInvestments(prev => prev.map(x => x.id === i.id ? i : x)), []);
+  const deleteInvestment = useCallback((id: string) => setInvestments(prev => prev.filter(x => x.id !== id)), []);
 
-  const updateForecast = useCallback((f: Forecast[]) => setAllFc(prev => {
-    const others = prev.filter(x => x.userId !== currentUserId);
-    return [...others, ...f];
-  }), [currentUserId]);
+  const updateForecast = useCallback((f: Forecast[]) => setForecast(f), []);
 
   const syncToSheet = useCallback(() => {
     console.log('Syncing to Google Sheets...');
@@ -176,20 +297,32 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     return transactions.filter(t => new Date(t.date).getFullYear() === year);
   }, [transactions]);
 
-  const getCategoryName = useCallback((id: string) => allCat.find(c => c.id === id)?.name || 'Sem categoria', [allCat]);
-  const getAccountName = useCallback((id: string) => allAcc.find(a => a.id === id)?.name || 'Sem conta', [allAcc]);
-  const getCategoryColor = useCallback((id: string) => allCat.find(c => c.id === id)?.color || '#6b7280', [allCat]);
+  const getCategoryName = useCallback((id: string) => {
+    const all = isAdmin ? allCategories : categories;
+    return all.find(c => c.id === id)?.name || 'Sem categoria';
+  }, [categories, allCategories, isAdmin]);
 
-  const getUserTransactions = useCallback((userId: string) => allTx.filter(t => t.userId === userId), [allTx]);
-  const getUserCategories = useCallback((userId: string) => allCat.filter(c => c.userId === userId), [allCat]);
-  const getUserAccounts = useCallback((userId: string) => allAcc.filter(a => a.userId === userId), [allAcc]);
-  const getUserDebts = useCallback((userId: string) => allDbt.filter(d => d.userId === userId), [allDbt]);
-  const getUserInvestments = useCallback((userId: string) => allInv.filter(i => i.userId === userId), [allInv]);
+  const getAccountName = useCallback((id: string) => {
+    const all = isAdmin ? allAccounts : accounts;
+    return all.find(a => a.id === id)?.name || 'Sem conta';
+  }, [accounts, allAccounts, isAdmin]);
+
+  const getCategoryColor = useCallback((id: string) => {
+    const all = isAdmin ? allCategories : categories;
+    return all.find(c => c.id === id)?.color || '#6b7280';
+  }, [categories, allCategories, isAdmin]);
+
+  // Admin helpers — load specific user data from their isolated storage
+  const getUserTransactions = useCallback((userId: string) => loadUserData<Transaction[]>(userId, 'transactions', []), []);
+  const getUserCategories = useCallback((userId: string) => loadUserData<Category[]>(userId, 'categories', []), []);
+  const getUserAccounts = useCallback((userId: string) => loadUserData<Account[]>(userId, 'accounts', []), []);
+  const getUserDebts = useCallback((userId: string) => loadUserData<Debt[]>(userId, 'debts', []), []);
+  const getUserInvestments = useCallback((userId: string) => loadUserData<Investment[]>(userId, 'investments', []), []);
 
   return (
     <FinanceContext.Provider value={{
       transactions, categories, accounts, debts, investments, forecast,
-      allTransactions: allTx, allCategories: allCat, allAccounts: allAcc, allDebts: allDbt, allInvestments: allInv,
+      allTransactions, allCategories, allAccounts, allDebts, allInvestments,
       addTransaction, updateTransaction, deleteTransaction,
       addCategory, updateCategory, deleteCategory,
       addAccount, updateAccount, deleteAccount,
