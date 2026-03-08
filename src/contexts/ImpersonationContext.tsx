@@ -228,8 +228,8 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     const sessionId = crypto.randomUUID();
     const newSession: ImpersonationSession = {
       sessionId,
-      adminId: realUser.id,
-      adminName: realUser.name,
+      adminId,
+      adminName,
       userId: pendingTarget.id,
       userName: pendingTarget.name,
       startTime: new Date().toISOString(),
