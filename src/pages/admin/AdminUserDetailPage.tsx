@@ -147,7 +147,7 @@ export default function AdminUserDetailPage() {
           <div>
             <p className="text-xs text-muted-foreground">Dívidas</p>
             <p className="text-lg font-bold mt-0.5">{userDebts.length}</p>
-            <p className="text-xs text-muted-foreground">R$ {userDebts.reduce((s, d) => s + d.currentBalance, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            <p className="text-xs text-muted-foreground">R$ {userDebts.reduce((s, d) => s + d.remainingAmount, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
           </div>
         </div>
         <div className="finance-card flex items-start gap-3">
