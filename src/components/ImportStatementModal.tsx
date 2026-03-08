@@ -363,6 +363,11 @@ export function ImportStatementModal({ open, onClose }: Props) {
               <span className="px-3 py-1 rounded-full bg-muted font-medium">{rows.length} transações</span>
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">{incomeCount} receitas</span>
               <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-600 font-medium">{expenseCount} despesas</span>
+              {detectedBank !== 'unknown' && detectedBank !== 'generic' && (
+                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-medium flex items-center gap-1">
+                  <Building2 className="h-3 w-3" /> {BANK_NAMES[detectedBank]}
+                </span>
+              )}
               {duplicateCount > 0 && (
                 <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-600 font-medium flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> {duplicateCount} possíveis duplicatas
