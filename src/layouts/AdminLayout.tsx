@@ -3,12 +3,14 @@ import { Outlet, Navigate, Link, useLocation, useNavigate } from 'react-router-d
 import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard, Users, BarChart3, ShieldAlert, ChevronLeft,
-  LogOut, Menu, X, Shield, ScrollText, Settings
+  LogOut, Menu, X, Shield, ScrollText, Settings, Crown, CreditCard
 } from 'lucide-react';
 
 const adminNav = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/admin/users', label: 'Usuários', icon: Users },
+  { path: '/admin/plans', label: 'Planos', icon: Crown },
+  { path: '/admin/subscriptions', label: 'Assinaturas', icon: CreditCard },
   { path: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { path: '/admin/security', label: 'Segurança', icon: ShieldAlert },
   { path: '/admin/logs', label: 'Logs', icon: ScrollText },

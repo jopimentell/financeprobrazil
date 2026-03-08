@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, CalendarDays, Tag, Wallet,
   CreditCard, TrendingUp, LineChart, FileBarChart, Target, Menu, X, ChevronLeft,
-  ArrowDownCircle, ArrowUpCircle
+  ArrowDownCircle, ArrowUpCircle, Crown
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -19,6 +19,7 @@ const navItems = [
   { path: '/calendario', label: 'Calendário', icon: CalendarDays },
   { path: '/projecao', label: 'Projeção', icon: LineChart },
   { path: '/relatorios', label: 'Relatórios', icon: FileBarChart },
+  { path: '/plans', label: 'Planos', icon: Crown },
 ];
 
 export function SidebarNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {

@@ -7,6 +7,7 @@ import { FinanceProvider } from "@/contexts/FinanceContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AdminLogProvider } from "@/contexts/AdminLogContext";
 import { ImpersonationProvider } from "@/contexts/ImpersonationContext";
+import { PlanProvider } from "@/contexts/PlanContext";
 import ImpersonationBanner from "@/components/ImpersonationBanner";
 import AppLayout from "@/layouts/AppLayout";
 import AdminLayout from "@/layouts/AdminLayout";
@@ -31,6 +32,10 @@ import AdminAnalyticsPage from "@/pages/admin/AdminAnalyticsPage";
 import AdminSecurityPage from "@/pages/admin/AdminSecurityPage";
 import AdminLogsPage from "@/pages/admin/AdminLogsPage";
 import AdminSettingsPage from "@/pages/admin/AdminSettingsPage";
+import AdminPlansPage from "@/pages/admin/AdminPlansPage";
+import AdminSubscriptionsPage from "@/pages/admin/AdminSubscriptionsPage";
+import PlansPage from "@/pages/Plans";
+import SubscriptionPage from "@/pages/Subscription";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,9 +44,10 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <FinanceProvider>
-          <AdminLogProvider>
-            <ImpersonationProvider>
+        <PlanProvider>
+          <FinanceProvider>
+            <AdminLogProvider>
+              <ImpersonationProvider>
               <Toaster />
               <Sonner />
               <ImpersonationBanner />
@@ -66,6 +72,8 @@ const App = () => (
                     <Route path="/investimentos" element={<Investments />} />
                     <Route path="/projecao" element={<ForecastPage />} />
                     <Route path="/relatorios" element={<Reports />} />
+                    <Route path="/plans" element={<PlansPage />} />
+                    <Route path="/account/subscription" element={<SubscriptionPage />} />
                   </Route>
                   {/* Admin routes */}
                   <Route element={<AdminLayout />}>
@@ -77,13 +85,16 @@ const App = () => (
                     <Route path="/admin/security" element={<AdminSecurityPage />} />
                     <Route path="/admin/logs" element={<AdminLogsPage />} />
                     <Route path="/admin/settings" element={<AdminSettingsPage />} />
+                    <Route path="/admin/plans" element={<AdminPlansPage />} />
+                    <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
-            </ImpersonationProvider>
-          </AdminLogProvider>
-        </FinanceProvider>
+              </ImpersonationProvider>
+            </AdminLogProvider>
+          </FinanceProvider>
+        </PlanProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
