@@ -269,7 +269,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="sm:max-w-[min(80vw,64rem)] max-w-[95vw]">
+      <DialogContent className="p-0">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />
