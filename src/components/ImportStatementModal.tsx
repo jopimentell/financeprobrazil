@@ -95,7 +95,8 @@ function parsePastedText(text: string): ParsedRow[] {
       const amount = parseFloat(rawAmount);
       if (isNaN(amount)) return null;
 
-      const type: 'income' | 'expense' = amount >= 0 ? 'income' : 'expense';
+      const detected = detectTransactionType(description, amount);
+      const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
       const suggested = suggestCategory(description);
 
       return {
@@ -107,6 +108,7 @@ function parsePastedText(text: string): ParsedRow[] {
         suggestedCategory: suggested,
         selected: true,
         isDuplicate: false,
+        typeConfirmed: detected !== 'unknown',
       };
     }
 
