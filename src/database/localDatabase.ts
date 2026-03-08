@@ -99,6 +99,8 @@ function migrateLegacyData(): Database {
       debts: loadLegacy(userId, 'debts'),
       investments: loadLegacy(userId, 'investments'),
       forecast: loadLegacy(userId, 'forecast'),
+      creditCards: loadLegacy(userId, 'creditCards'),
+      creditCardExpenses: loadLegacy(userId, 'creditCardExpenses'),
     };
   }
 
