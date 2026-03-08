@@ -76,10 +76,10 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
 
   // Capture admin identity when not impersonating
   useEffect(() => {
-    if (isAdmin && !impersonating && authUser) {
-      adminRef.current = { id: authUser.id, name: authUser.name, email: authUser.email };
+    if (isAdmin && !impersonating && realUser) {
+      adminRef.current = { id: realUser.id, name: realUser.name, email: realUser.email };
     }
-  }, [isAdmin, impersonating, authUser]);
+  }, [isAdmin, impersonating, realUser]);
 
   const adminId = adminRef.current?.id || authUser?.id || '';
   const adminName = adminRef.current?.name || authUser?.name || '';
