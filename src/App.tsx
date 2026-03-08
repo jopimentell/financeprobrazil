@@ -91,9 +91,10 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
-            </ImpersonationProvider>
-          </AdminLogProvider>
-        </FinanceProvider>
+              </ImpersonationProvider>
+            </AdminLogProvider>
+          </FinanceProvider>
+        </PlanProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>

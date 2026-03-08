@@ -19,6 +19,7 @@ const navItems = [
   { path: '/calendario', label: 'Calendário', icon: CalendarDays },
   { path: '/projecao', label: 'Projeção', icon: LineChart },
   { path: '/relatorios', label: 'Relatórios', icon: FileBarChart },
+  { path: '/plans', label: 'Planos', icon: Crown },
 ];
 
 export function SidebarNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
