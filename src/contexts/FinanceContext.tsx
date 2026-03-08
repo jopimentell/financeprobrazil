@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import * as db from '@/database/localDatabase';
 import * as financeService from '@/services/financeService';
