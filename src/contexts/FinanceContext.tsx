@@ -92,6 +92,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     setDebts(data.debts);
     setInvestments(data.investments);
     setForecast(data.forecast);
+    setCreditCards(data.creditCards || []);
+    setCreditCardExpenses(data.creditCardExpenses || []);
   }, [currentUserId, isAdmin]);
 
   // Reset loaded ref on logout
