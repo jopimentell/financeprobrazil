@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
+import { ImportStatementModal } from '@/components/ImportStatementModal';
 import { Transaction } from '@/types/finance';
-import { Plus, Filter } from 'lucide-react';
+import { Plus, Filter, Upload } from 'lucide-react';
 
 export default function Transactions() {
   const { transactions, categories } = useFinance();
@@ -13,6 +14,7 @@ export default function Transactions() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return transactions
@@ -27,10 +29,16 @@ export default function Transactions() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">Transações</h1>
-        <button onClick={() => { setEditTx(null); setModalOpen(true); }}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
-          <Plus className="h-4 w-4" /> Nova Transação
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setImportOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-input bg-background text-sm font-medium hover:bg-accent transition-colors">
+            <Upload className="h-4 w-4" /> Importar Extrato
+          </button>
+          <button onClick={() => { setEditTx(null); setModalOpen(true); }}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity">
+            <Plus className="h-4 w-4" /> Nova Transação
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -68,6 +76,7 @@ export default function Transactions() {
       </div>
 
       <TransactionModal open={modalOpen} onClose={() => { setModalOpen(false); setEditTx(null); }} transaction={editTx} />
+      <ImportStatementModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   );
 }
