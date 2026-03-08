@@ -252,7 +252,7 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
     check24hAlert();
 
     return { success: true };
-  }, [pendingTarget, realUser, failedAttempts, isLocked, isRateLimited, lockRemainingSeconds, addLog, check24hAlert]);
+  }, [pendingTarget, adminId, adminName, adminEmail, failedAttempts, isLocked, isRateLimited, lockRemainingSeconds, addLog, check24hAlert, authStartImpersonation]);
 
   const stopImpersonation = useCallback(() => {
     if (!session) return;
