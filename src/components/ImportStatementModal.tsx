@@ -6,9 +6,7 @@ import { Transaction } from '@/types/finance';
 import { Upload, FileText, ClipboardPaste, CheckCircle2, AlertTriangle, X, ChevronLeft, ChevronRight, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
-import { parseCSVSmart, BANK_NAMES, ParsedRow, BankType, parseDate, isValidDate } from '@/utils/parsers';
-
-import { parseBRNumber } from '@/utils/parsers/numberUtils';
+import { parseCSVSmart, BANK_NAMES, type ParsedRow, type BankType, parseDate, parseBRNumber } from '@/utils/parsers';
 
 function parsePastedText(text: string): ParsedRow[] {
   const lines = text.trim().split('\n').filter(l => l.trim());
