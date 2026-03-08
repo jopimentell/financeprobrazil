@@ -146,6 +146,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
   const [importMode, setImportMode] = useState<'file' | 'paste'>('file');
   const [bulkCategory, setBulkCategory] = useState('');
   const [fileName, setFileName] = useState('');
+  const [detectedBank, setDetectedBank] = useState<BankType>('unknown');
 
   const expenseCategories = useMemo(() => categories.filter(c => c.type === 'expense'), [categories]);
   const incomeCategories = useMemo(() => categories.filter(c => c.type === 'income'), [categories]);
