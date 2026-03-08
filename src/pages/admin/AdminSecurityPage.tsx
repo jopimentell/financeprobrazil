@@ -4,7 +4,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
 import { useImpersonation } from '@/contexts/ImpersonationContext';
 import { useNavigate } from 'react-router-dom';
-import { ShieldAlert, Eye, Lock, AlertTriangle, Clock, UserCheck, X, Crown, ArrowDownToLine } from 'lucide-react';
+import { ShieldAlert, Eye, Lock, AlertTriangle, Clock, UserCheck, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FlaggedUser {
@@ -25,11 +25,6 @@ export default function AdminSecurityPage() {
   const navigate = useNavigate();
 
   const regularUsers = useMemo(() => users.filter(u => u.role === 'user'), [users]);
-
-  // Filter role-change and emergency access logs
-  const roleChangeLogs = useMemo(() => adminLogs.filter(l =>
-    l.action.includes('rebaixou') || l.action.includes('restaurou') || l.action.includes('Emergency Access') || l.action.includes('promovido')
-  ), [adminLogs]);
 
   const flaggedUsers: FlaggedUser[] = useMemo(() => {
     return regularUsers.map(u => {
@@ -57,6 +52,7 @@ export default function AdminSecurityPage() {
     toast.success('Usuário bloqueado por segurança');
   };
 
+  // Recent impersonation logs (last 50)
   const recentImpLogs = impersonationLogs.slice(0, 50);
 
   return (
@@ -64,54 +60,44 @@ export default function AdminSecurityPage() {
       <h1 className="text-2xl font-bold">Segurança & Detecção de Fraude</h1>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="finance-card flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-destructive/10"><ShieldAlert className="h-5 w-5 text-destructive" /></div>
-          <div><p className="text-xs text-muted-foreground">Usuários sinalizados</p><p className="text-2xl font-bold mt-0.5">{flaggedUsers.length}</p></div>
+          <div className="p-2 rounded-lg bg-destructive/10">
+            <ShieldAlert className="h-5 w-5 text-destructive" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Usuários sinalizados</p>
+            <p className="text-2xl font-bold mt-0.5">{flaggedUsers.length}</p>
+          </div>
         </div>
         <div className="finance-card flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-destructive/10"><AlertTriangle className="h-5 w-5 text-destructive" /></div>
-          <div><p className="text-xs text-muted-foreground">Risco alto</p><p className="text-2xl font-bold mt-0.5">{flaggedUsers.filter(u => u.riskLevel === 'high').length}</p></div>
+          <div className="p-2 rounded-lg bg-destructive/10">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Risco alto</p>
+            <p className="text-2xl font-bold mt-0.5">{flaggedUsers.filter(u => u.riskLevel === 'high').length}</p>
+          </div>
         </div>
         <div className="finance-card flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-amber-100"><UserCheck className="h-5 w-5 text-amber-700" /></div>
-          <div><p className="text-xs text-muted-foreground">Impersonações ativas</p><p className="text-2xl font-bold mt-0.5">{activeSessions.length}</p></div>
+          <div className="p-2 rounded-lg bg-amber-100">
+            <UserCheck className="h-5 w-5 text-amber-700" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Impersonações ativas</p>
+            <p className="text-2xl font-bold mt-0.5">{activeSessions.length}</p>
+          </div>
         </div>
         <div className="finance-card flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-accent"><Clock className="h-5 w-5 text-primary" /></div>
-          <div><p className="text-xs text-muted-foreground">Ações administrativas</p><p className="text-2xl font-bold mt-0.5">{adminLogs.length}</p></div>
-        </div>
-        <div className="finance-card flex items-start gap-3">
-          <div className="p-2 rounded-lg bg-amber-100"><Crown className="h-5 w-5 text-amber-700" /></div>
-          <div><p className="text-xs text-muted-foreground">Mudanças de role</p><p className="text-2xl font-bold mt-0.5">{roleChangeLogs.length}</p></div>
+          <div className="p-2 rounded-lg bg-accent">
+            <Clock className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Ações administrativas</p>
+            <p className="text-2xl font-bold mt-0.5">{adminLogs.length}</p>
+          </div>
         </div>
       </div>
-
-      {/* Role Change & Emergency Access Logs */}
-      {roleChangeLogs.length > 0 && (
-        <div className="finance-card p-0 overflow-hidden">
-          <div className="p-4 border-b border-border">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Crown className="h-4 w-4 text-amber-600" /> Mudanças de Role & Emergency Access
-            </h3>
-          </div>
-          <div className="divide-y divide-border max-h-64 overflow-y-auto">
-            {roleChangeLogs.slice(0, 30).map(log => (
-              <div key={log.id} className="p-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className={`inline-block w-2 h-2 rounded-full shrink-0 ${log.action.includes('Emergency') ? 'bg-red-500' : 'bg-amber-500'}`} />
-                  <div>
-                    <span className="font-medium">{log.adminName}</span>
-                    <span className="text-muted-foreground"> {log.action} </span>
-                    {log.targetUserName && <span className="font-medium">{log.targetUserName}</span>}
-                  </div>
-                </div>
-                <span className="text-xs text-muted-foreground shrink-0">{new Date(log.timestamp).toLocaleString('pt-BR')}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Active Impersonation Sessions */}
       <div className="finance-card p-0 overflow-hidden">
@@ -130,10 +116,17 @@ export default function AdminSecurityPage() {
                 <div key={s.sessionId} className="p-4 hover:bg-accent/30 transition-colors">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm"><span className="font-medium">{s.adminName}</span><span className="text-muted-foreground"> → </span><span className="font-medium">{s.userName}</span></p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Iniciada em {new Date(s.startTime).toLocaleString('pt-BR')} · {elapsed} min</p>
+                      <p className="text-sm">
+                        <span className="font-medium">{s.adminName}</span>
+                        <span className="text-muted-foreground"> → </span>
+                        <span className="font-medium">{s.userName}</span>
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Iniciada em {new Date(s.startTime).toLocaleString('pt-BR')} · {elapsed} min
+                      </p>
                     </div>
-                    <button onClick={stopImpersonation} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity shrink-0">
+                    <button onClick={stopImpersonation}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity shrink-0">
                       <X className="h-3.5 w-3.5" /> Encerrar
                     </button>
                   </div>
@@ -179,7 +172,9 @@ export default function AdminSecurityPage() {
                     {log.reason && <span className="text-xs text-muted-foreground ml-1">({log.reason})</span>}
                   </div>
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">{new Date(log.timestamp).toLocaleString('pt-BR')}</span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {new Date(log.timestamp).toLocaleString('pt-BR')}
+                </span>
               </div>
             ))}
           </div>
@@ -211,16 +206,19 @@ export default function AdminSecurityPage() {
                     <div className="mt-2 space-y-1">
                       {u.alerts.map((a, i) => (
                         <div key={i} className="flex items-center gap-2 text-xs text-destructive">
-                          <AlertTriangle className="h-3 w-3 shrink-0" /><span>{a}</span>
+                          <AlertTriangle className="h-3 w-3 shrink-0" />
+                          <span>{a}</span>
                         </div>
                       ))}
                     </div>
                   </div>
                   <div className="flex gap-2 shrink-0">
-                    <button onClick={() => navigate(`/admin/users/${u.id}`)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-accent hover:bg-accent/80 transition-colors">
+                    <button onClick={() => navigate(`/admin/users/${u.id}`)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-accent hover:bg-accent/80 transition-colors">
                       <Eye className="h-4 w-4" /> Ver perfil
                     </button>
-                    <button onClick={() => handleBlock(u)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity">
+                    <button onClick={() => handleBlock(u)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-destructive text-destructive-foreground hover:opacity-90 transition-opacity">
                       <Lock className="h-4 w-4" /> Bloquear
                     </button>
                   </div>
@@ -249,7 +247,9 @@ export default function AdminSecurityPage() {
                   <span className="text-muted-foreground"> {log.action} </span>
                   {log.targetUserName && <span className="font-medium">{log.targetUserName}</span>}
                 </div>
-                <span className="text-xs text-muted-foreground shrink-0">{new Date(log.timestamp).toLocaleString('pt-BR')}</span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {new Date(log.timestamp).toLocaleString('pt-BR')}
+                </span>
               </div>
             ))}
           </div>

@@ -60,7 +60,7 @@ function loadFromStorage<T>(key: string, fallback: T): T {
 }
 
 export function ImpersonationProvider({ children }: { children: React.ReactNode }) {
-  const { user: authUser, users, isAdmin, startImpersonation: authStartImpersonation, stopImpersonation: authStopImpersonation, impersonating, realUser } = useAuth();
+  const { user: authUser, users, isAdmin, startImpersonation: authStartImpersonation, stopImpersonation: authStopImpersonation, impersonating } = useAuth();
   const [pendingTarget, setPendingTarget] = useState<User | null>(null);
   const [session, setSession] = useState<ImpersonationSession | null>(null);
   const [logs, setLogs] = useState<ImpersonationLog[]>(() => loadFromStorage(LOGS_KEY, []));
@@ -76,10 +76,10 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
 
   // Capture admin identity when not impersonating
   useEffect(() => {
-    if (isAdmin && !impersonating && realUser) {
-      adminRef.current = { id: realUser.id, name: realUser.name, email: realUser.email };
+    if (isAdmin && !impersonating && authUser) {
+      adminRef.current = { id: authUser.id, name: authUser.name, email: authUser.email };
     }
-  }, [isAdmin, impersonating, realUser]);
+  }, [isAdmin, impersonating, authUser]);
 
   const adminId = adminRef.current?.id || authUser?.id || '';
   const adminName = adminRef.current?.name || authUser?.name || '';
@@ -185,10 +185,10 @@ export function ImpersonationProvider({ children }: { children: React.ReactNode 
   const activeSessions = allSessions.filter(s => s.isActive);
 
   const requestImpersonation = useCallback((targetUser: User) => {
-    if (!isAdmin || !realUser) return;
-    // Role-based impersonation check is handled by canImpersonate in AuthContext
+    if (!isAdmin) return;
+    if (targetUser.role === 'admin') return; // Cannot impersonate admins
     setPendingTarget(targetUser);
-  }, [isAdmin, realUser]);
+  }, [isAdmin]);
 
   const confirmImpersonation = useCallback((password: string, reason?: string): { success: boolean; error?: string } => {
     if (!pendingTarget || !adminId) return { success: false, error: 'Estado inválido' };
