@@ -8,11 +8,13 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function AppLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [fabModal, setFabModal] = useState(false);
   const [fabType, setFabType] = useState<'income' | 'expense'>('expense');
 
   if (!user) return <Navigate to="/login" replace />;
+  // Admin users cannot access financial pages
+  if (isAdmin) return <Navigate to="/admin/dashboard" replace />;
 
   return (
     <div className="flex min-h-screen w-full bg-background">

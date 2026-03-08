@@ -2,10 +2,9 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, CalendarDays, Tag, Wallet,
   CreditCard, TrendingUp, LineChart, FileBarChart, Target, Menu, X, ChevronLeft,
-  ArrowDownCircle, ArrowUpCircle, Shield
+  ArrowDownCircle, ArrowUpCircle
 } from 'lucide-react';
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -24,7 +23,6 @@ const navItems = [
 
 export function SidebarNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const location = useLocation();
-  const { isAdmin } = useAuth();
 
   return (
     <aside className={`hidden md:flex flex-col bg-sidebar border-r border-sidebar-border transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'} min-h-screen`}>
@@ -59,22 +57,6 @@ export function SidebarNavigation({ collapsed, onToggle }: { collapsed: boolean;
             </Link>
           );
         })}
-        {isAdmin && (
-          <>
-            <div className={`my-3 border-t border-sidebar-border ${collapsed ? 'mx-1' : ''}`} />
-            <Link
-              to="/admin"
-              title={collapsed ? 'Admin' : undefined}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all
-                ${location.pathname.startsWith('/admin')
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'text-sidebar-muted hover:bg-sidebar-accent hover:text-sidebar-foreground'}`}
-            >
-              <Shield style={{ width: 18, height: 18 }} className="shrink-0" />
-              {!collapsed && <span>Admin</span>}
-            </Link>
-          </>
-        )}
       </nav>
     </aside>
   );
@@ -104,7 +86,6 @@ export function MobileBottomNavigation() {
 export function MobileMenuDrawer() {
   const [open, setOpen] = useState(false);
   const location = useLocation();
-  const { isAdmin } = useAuth();
 
   return (
     <>
@@ -140,20 +121,6 @@ export function MobileMenuDrawer() {
                   </Link>
                 );
               })}
-              {isAdmin && (
-                <>
-                  <div className="my-3 border-t border-border" />
-                  <Link
-                    to="/admin"
-                    onClick={() => setOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
-                      ${location.pathname.startsWith('/admin') ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
-                  >
-                    <Shield style={{ width: 18, height: 18 }} />
-                    <span>Admin</span>
-                  </Link>
-                </>
-              )}
             </nav>
           </div>
         </div>
