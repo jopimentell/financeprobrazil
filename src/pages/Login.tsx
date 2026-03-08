@@ -1,13 +1,20 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>('login');
+  const initialMode = (searchParams.get('mode') as 'login' | 'register') || 'login';
+  const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(initialMode);
+
+  useEffect(() => {
+    const m = searchParams.get('mode');
+    if (m === 'register' || m === 'login') setMode(m);
+  }, [searchParams]);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +63,12 @@ export default function Login() {
 
   return (
     <div className="w-full max-w-md animate-fade-in">
+      <div className="mb-6">
+        <button onClick={() => navigate('/')} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
+        </button>
+      </div>
       <div className="text-center mb-8">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-4">
           <span className="text-primary-foreground text-2xl font-bold">F</span>
@@ -93,11 +106,7 @@ export default function Login() {
               <button onClick={() => setMode('forgot')} className="text-sm text-primary hover:underline">Esqueci minha senha</button>
               <button onClick={() => setMode('register')} className="text-sm text-primary hover:underline">Criar conta</button>
             </div>
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground text-center mb-2">Credenciais de teste:</p>
-              <p className="text-xs text-muted-foreground text-center">Admin: admin@financepro.com / admin123</p>
-              <p className="text-xs text-muted-foreground text-center">Usuário: joao@email.com / 12345678</p>
-            </div>
+          
           </>
         )}
 

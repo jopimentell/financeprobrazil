@@ -40,6 +40,7 @@ import PlansPage from "@/pages/Plans";
 import SubscriptionPage from "@/pages/Subscription";
 import ProfilePage from "@/pages/Profile";
 import NotFound from "@/pages/NotFound";
+import Welcome from "@/pages/Welcome";
 
 const queryClient = new QueryClient();
 
@@ -56,7 +57,7 @@ const App = () => (
               <ImpersonationBanner />
               <BrowserRouter>
                 <Routes>
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="/" element={<Welcome />} />
                   <Route element={<AuthLayout />}>
                     <Route path="/login" element={<Login />} />
                   </Route>
