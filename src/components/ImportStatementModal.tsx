@@ -3,84 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Transaction } from '@/types/finance';
-import { Upload, FileText, ClipboardPaste, CheckCircle2, AlertTriangle, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, FileText, ClipboardPaste, CheckCircle2, AlertTriangle, X, ChevronLeft, ChevronRight, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
-
-interface ParsedRow {
-  date: string;
-  description: string;
-  amount: number;
-  type: 'income' | 'expense';
-  categoryId: string;
-  suggestedCategory: string;
-  selected: boolean;
-  isDuplicate: boolean;
-  typeConfirmed: boolean;
-}
-
-function parseDate(raw: string): string {
-  // Try common formats: DD/MM/YYYY, DD/MM, YYYY-MM-DD, DD-MM-YYYY
-  const trimmed = raw.trim();
-
-  // YYYY-MM-DD
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-
-  // DD/MM/YYYY or DD-MM-YYYY
-  const dmy = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-  if (dmy) {
-    return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
-  }
-
-  // DD/MM (assume current year)
-  const dm = trimmed.match(/^(\d{1,2})[\/\-](\d{1,2})$/);
-  if (dm) {
-    const year = new Date().getFullYear();
-    return `${year}-${dm[2].padStart(2, '0')}-${dm[1].padStart(2, '0')}`;
-  }
-
-  return trimmed;
-}
-
-function parseCSV(text: string): ParsedRow[] {
-  const lines = text.trim().split('\n').filter(l => l.trim());
-  if (lines.length < 2) return [];
-
-  const header = lines[0].toLowerCase();
-  const hasHeader = header.includes('data') || header.includes('date') || header.includes('descri');
-  const dataLines = hasHeader ? lines.slice(1) : lines;
-
-  // Detect separator
-  const sep = lines[0].includes(';') ? ';' : ',';
-
-  return dataLines.map(line => {
-    const parts = line.split(sep).map(p => p.trim().replace(/^"|"$/g, ''));
-    if (parts.length < 3) return null;
-
-    const date = parseDate(parts[0]);
-    const description = parts[1];
-    const rawAmount = parts[2].replace(/[R$\s]/g, '').replace(',', '.');
-    const amount = parseFloat(rawAmount);
-    if (isNaN(amount)) return null;
-
-    const detected = detectTransactionType(description, amount);
-    const type: 'income' | 'expense' = detected === 'unknown' ? (amount >= 0 ? 'income' : 'expense') : detected;
-    const absAmount = Math.abs(amount);
-    const suggested = suggestCategory(description);
-
-    return {
-      date,
-      description,
-      amount: absAmount,
-      type,
-      categoryId: '',
-      suggestedCategory: suggested,
-      selected: true,
-      isDuplicate: false,
-      typeConfirmed: detected !== 'unknown',
-    };
-  }).filter(Boolean) as ParsedRow[];
-}
+import { parseCSVSmart, BANK_NAMES, type ParsedRow, type BankType, parseDate, parseBRNumber } from '@/utils/parsers';
 
 function parsePastedText(text: string): ParsedRow[] {
   const lines = text.trim().split('\n').filter(l => l.trim());
@@ -91,8 +17,8 @@ function parsePastedText(text: string): ParsedRow[] {
     if (match) {
       const date = parseDate(match[1]);
       const description = match[2].trim();
-      const rawAmount = match[3].replace(/[R$\s]/g, '').replace(',', '.');
-      const amount = parseFloat(rawAmount);
+      const amount = parseBRNumber(match[3]);
+
       if (isNaN(amount)) return null;
 
       const detected = detectTransactionType(description, amount);
@@ -117,8 +43,8 @@ function parsePastedText(text: string): ParsedRow[] {
     if (parts.length >= 3) {
       const date = parseDate(parts[0]);
       const description = parts[1];
-      const rawAmount = parts[2].replace(/[R$\s]/g, '').replace(',', '.');
-      const amount = parseFloat(rawAmount);
+      const amount = parseBRNumber(parts[2]);
+
       if (isNaN(amount)) return null;
 
       const detected = detectTransactionType(description, amount);
@@ -158,7 +84,7 @@ function parseOFX(text: string): ParsedRow[] {
 
     // OFX date format: YYYYMMDD or YYYYMMDDHHMMSS
     const date = `${dtPosted.slice(0, 4)}-${dtPosted.slice(4, 6)}-${dtPosted.slice(6, 8)}`;
-    const amount = parseFloat(trnAmt.replace(',', '.'));
+    const amount = parseBRNumber(trnAmt);
     if (isNaN(amount)) continue;
 
     const desc = name || 'Transação importada';
@@ -195,6 +121,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
   const [importMode, setImportMode] = useState<'file' | 'paste'>('file');
   const [bulkCategory, setBulkCategory] = useState('');
   const [fileName, setFileName] = useState('');
+  const [detectedBank, setDetectedBank] = useState<BankType>('unknown');
 
   const expenseCategories = useMemo(() => categories.filter(c => c.type === 'expense'), [categories]);
   const incomeCategories = useMemo(() => categories.filter(c => c.type === 'income'), [categories]);
@@ -257,8 +184,14 @@ export function ImportStatementModal({ open, onClose }: Props) {
 
       if (ext.endsWith('.ofx') || ext.endsWith('.qfx')) {
         parsed = parseOFX(text);
+        setDetectedBank('unknown');
       } else {
-        parsed = parseCSV(text);
+        const result = parseCSVSmart(text);
+        parsed = result.rows;
+        setDetectedBank(result.bank);
+        if (result.bank !== 'generic') {
+          toast.info(`Banco detectado: ${BANK_NAMES[result.bank]}`);
+        }
       }
 
       if (parsed.length === 0) {
@@ -405,6 +338,11 @@ export function ImportStatementModal({ open, onClose }: Props) {
               <span className="px-3 py-1 rounded-full bg-muted font-medium">{rows.length} transações</span>
               <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 font-medium">{incomeCount} receitas</span>
               <span className="px-3 py-1 rounded-full bg-red-500/10 text-red-600 font-medium">{expenseCount} despesas</span>
+              {detectedBank !== 'unknown' && detectedBank !== 'generic' && (
+                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary font-medium flex items-center gap-1">
+                  <Building2 className="h-3 w-3" /> {BANK_NAMES[detectedBank]}
+                </span>
+              )}
               {duplicateCount > 0 && (
                 <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-600 font-medium flex items-center gap-1">
                   <AlertTriangle className="h-3 w-3" /> {duplicateCount} possíveis duplicatas
