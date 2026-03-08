@@ -60,7 +60,7 @@ export function canModifyUser(actor: User, target: User): { allowed: boolean; er
 export function canImpersonate(actor: User, target: User): boolean {
   if (actor.id === target.id) return false;
   if (target.role === 'owner') return false;
-  if (actor.role === 'owner') return target.role !== 'owner';
+  if (actor.role === 'owner') return true; // all non-owners (already filtered above)
   if (actor.role === 'admin') return target.role === 'user' || target.role === 'support';
   if (actor.role === 'support') return target.role === 'user';
   return false;
