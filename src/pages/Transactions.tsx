@@ -14,6 +14,7 @@ export default function Transactions() {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [search, setSearch] = useState('');
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = useMemo(() => {
     return transactions
