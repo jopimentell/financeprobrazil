@@ -151,11 +151,11 @@ export async function updateTransaction(userId: string, t: Transaction): Promise
     installments: t.installments, notes: t.notes,
     parcelamento_id: t.parcelamentoId, origin: t.origin,
     parcela_atual: t.parcelaAtual, total_parcelas: t.totalParcelas,
-  }).eq('id', t.id);
+  }).eq('id', t.id).eq('user_id', userId);
 }
 
 export async function deleteTransaction(userId: string, id: string): Promise<void> {
-  await supabase.from('transactions').delete().eq('id', id);
+  await supabase.from('transactions').delete().eq('id', id).eq('user_id', userId);
 }
 
 // ── Categories ─────────────────────────────────────────
@@ -169,11 +169,11 @@ export async function addCategory(userId: string, c: Omit<Category, 'id' | 'user
 }
 
 export async function updateCategory(userId: string, c: Category): Promise<void> {
-  await supabase.from('categories').update({ name: c.name, type: c.type, color: c.color }).eq('id', c.id);
+  await supabase.from('categories').update({ name: c.name, type: c.type, color: c.color }).eq('id', c.id).eq('user_id', userId);
 }
 
 export async function deleteCategory(userId: string, id: string): Promise<void> {
-  await supabase.from('categories').delete().eq('id', id);
+  await supabase.from('categories').delete().eq('id', id).eq('user_id', userId);
 }
 
 // ── Accounts ───────────────────────────────────────────
@@ -187,11 +187,11 @@ export async function addAccount(userId: string, a: Omit<Account, 'id' | 'userId
 }
 
 export async function updateAccount(userId: string, a: Account): Promise<void> {
-  await supabase.from('accounts').update({ name: a.name, type: a.type, balance: a.balance }).eq('id', a.id);
+  await supabase.from('accounts').update({ name: a.name, type: a.type, balance: a.balance }).eq('id', a.id).eq('user_id', userId);
 }
 
 export async function deleteAccount(userId: string, id: string): Promise<void> {
-  await supabase.from('accounts').delete().eq('id', id);
+  await supabase.from('accounts').delete().eq('id', id).eq('user_id', userId);
 }
 
 // ── Debts ──────────────────────────────────────────────
@@ -266,11 +266,11 @@ export async function updateDebt(userId: string, d: Debt): Promise<void> {
     remaining_amount: d.remainingAmount, installments: d.installments,
     paid_installments: d.paidInstallments, interest_rate: d.interestRate,
     due_date: d.dueDate,
-  }).eq('id', d.id);
+  }).eq('id', d.id).eq('user_id', userId);
 }
 
 export async function deleteDebt(userId: string, id: string): Promise<void> {
-  await supabase.from('debts').delete().eq('id', id);
+  await supabase.from('debts').delete().eq('id', id).eq('user_id', userId);
   // Remove future installment transactions
   const now = new Date();
   const { data: txs } = await supabase.from('transactions')
@@ -286,7 +286,7 @@ export async function deleteDebt(userId: string, id: string): Promise<void> {
     }).map((tx: any) => tx.id);
 
     if (futureIds.length > 0) {
-      await supabase.from('transactions').delete().in('id', futureIds);
+      await supabase.from('transactions').delete().in('id', futureIds).eq('user_id', userId);
     }
   }
 }
@@ -308,11 +308,11 @@ export async function updateInvestment(userId: string, i: Investment): Promise<v
   await supabase.from('investments').update({
     name: i.name, type: i.type, invested_amount: i.investedAmount,
     current_value: i.currentValue, profit: i.profit,
-  }).eq('id', i.id);
+  }).eq('id', i.id).eq('user_id', userId);
 }
 
 export async function deleteInvestment(userId: string, id: string): Promise<void> {
-  await supabase.from('investments').delete().eq('id', id);
+  await supabase.from('investments').delete().eq('id', id).eq('user_id', userId);
 }
 
 // ── Forecast ───────────────────────────────────────────
@@ -363,12 +363,12 @@ export async function addCreditCard(userId: string, c: Omit<CreditCard, 'id' | '
 export async function updateCreditCard(userId: string, c: CreditCard): Promise<void> {
   await supabase.from('credit_cards').update({
     name: c.name, limit: c.limit, closing_day: c.closingDay, due_day: c.dueDay,
-  }).eq('id', c.id);
+  }).eq('id', c.id).eq('user_id', userId);
 }
 
 export async function deleteCreditCard(userId: string, id: string): Promise<void> {
-  await supabase.from('credit_card_expenses').delete().eq('card_id', id);
-  await supabase.from('credit_cards').delete().eq('id', id);
+  await supabase.from('credit_card_expenses').delete().eq('card_id', id).eq('user_id', userId);
+  await supabase.from('credit_cards').delete().eq('id', id).eq('user_id', userId);
 }
 
 // ── Credit Card Expenses ──────────────────────────────
@@ -414,10 +414,10 @@ export async function addCreditCardExpense(
 
 export async function deleteCreditCardExpense(userId: string, id: string): Promise<void> {
   // Find the expense to check if it's a parent
-  const { data } = await supabase.from('credit_card_expenses').select('id, parent_expense_id').eq('id', id).single();
+  const { data } = await supabase.from('credit_card_expenses').select('id, parent_expense_id').eq('id', id).eq('user_id', userId).single();
   if (!data) return;
   const parentId = data.parent_expense_id || data.id;
-  await supabase.from('credit_card_expenses').delete().or(`id.eq.${parentId},parent_expense_id.eq.${parentId}`);
+  await supabase.from('credit_card_expenses').delete().or(`id.eq.${parentId},parent_expense_id.eq.${parentId}`).eq('user_id', userId);
 }
 
 export async function updateCreditCardExpense(userId: string, id: string, updates: Partial<CreditCardExpense>): Promise<void> {
@@ -426,7 +426,7 @@ export async function updateCreditCardExpense(userId: string, id: string, update
   if (updates.amount !== undefined) row.amount = updates.amount;
   if (updates.category !== undefined) row.category = updates.category;
   if (updates.purchaseDate !== undefined) row.purchase_date = updates.purchaseDate;
-  await supabase.from('credit_card_expenses').update(row).eq('id', id);
+  await supabase.from('credit_card_expenses').update(row).eq('id', id).eq('user_id', userId);
 }
 
 // ── Paid Invoices ─────────────────────────────────────
