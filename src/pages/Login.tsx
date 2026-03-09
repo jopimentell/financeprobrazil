@@ -34,13 +34,17 @@ export default function Login() {
     e.preventDefault();
     if (!email || !password) { toast.error('Preencha todos os campos'); return; }
     setSubmitting(true);
-    const success = await login(email, password);
-    setSubmitting(false);
-    if (success) {
-      toast.success('Login realizado com sucesso!');
-      // Navigation handled by useEffect above
-    } else {
-      toast.error('Email ou senha incorretos');
+    try {
+      const success = await login(email, password);
+      if (success) {
+        toast.success('Login realizado com sucesso!');
+      } else {
+        toast.error('Email ou senha incorretos');
+      }
+    } catch (err) {
+      toast.error('Erro inesperado ao fazer login');
+    } finally {
+      setSubmitting(false);
     }
   };
 
