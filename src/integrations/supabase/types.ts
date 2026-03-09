@@ -280,6 +280,135 @@ export type Database = {
           },
         ]
       }
+      plan_features: {
+        Row: {
+          enabled: boolean
+          feature_key: string
+          id: string
+          plan_id: string
+        }
+        Insert: {
+          enabled?: boolean
+          feature_key: string
+          id?: string
+          plan_id: string
+        }
+        Update: {
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_limits: {
+        Row: {
+          id: string
+          max_accounts: number
+          max_categories: number
+          max_goals: number
+          max_transactions_per_month: number
+          plan_id: string
+        }
+        Insert: {
+          id?: string
+          max_accounts?: number
+          max_categories?: number
+          max_goals?: number
+          max_transactions_per_month?: number
+          plan_id: string
+        }
+        Update: {
+          id?: string
+          max_accounts?: number
+          max_categories?: number
+          max_goals?: number
+          max_transactions_per_month?: number
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_limits_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_settings: {
+        Row: {
+          default_plan_id: string | null
+          id: string
+          monetization_enabled: boolean
+        }
+        Insert: {
+          default_plan_id?: string | null
+          id?: string
+          monetization_enabled?: boolean
+        }
+        Update: {
+          default_plan_id?: string | null
+          id?: string
+          monetization_enabled?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_settings_default_plan_id_fkey"
+            columns: ["default_plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          badge: string | null
+          color: string | null
+          created_at: string
+          description: string
+          id: string
+          is_active: boolean
+          is_free: boolean
+          name: string
+          price_monthly: number
+          price_yearly: number
+        }
+        Insert: {
+          badge?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          name: string
+          price_monthly?: number
+          price_yearly?: number
+        }
+        Update: {
+          badge?: string | null
+          color?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          is_active?: boolean
+          is_free?: boolean
+          name?: string
+          price_monthly?: number
+          price_yearly?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           closing_day: number
@@ -312,6 +441,47 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          billing_cycle: string
+          created_at: string
+          end_date: string
+          id: string
+          plan_id: string
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          billing_cycle?: string
+          created_at?: string
+          end_date: string
+          id?: string
+          plan_id: string
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string
+          created_at?: string
+          end_date?: string
+          id?: string
+          plan_id?: string
+          start_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_logs: {
         Row: {
