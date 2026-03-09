@@ -4,10 +4,10 @@ import { Check, X, Sparkles, Zap, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { allFeatures, featureCategoryLabels } from '@/data/planData';
 
-const planIcons: Record<string, React.ReactNode> = {
-  'plan-free': <Zap className="h-6 w-6" />,
-  'plan-pro': <Sparkles className="h-6 w-6" />,
-  'plan-premium': <Crown className="h-6 w-6" />,
+const planIconsByName: Record<string, React.ReactNode> = {
+  'Free': <Zap className="h-6 w-6" />,
+  'Pro': <Sparkles className="h-6 w-6" />,
+  'Premium': <Crown className="h-6 w-6" />,
 };
 
 export default function PlansPage() {
