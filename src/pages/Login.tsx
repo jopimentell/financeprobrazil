@@ -54,13 +54,17 @@ export default function Login() {
     if (password.length < 8) { toast.error('Senha deve ter no mínimo 8 caracteres'); return; }
     if (password !== confirmPassword) { toast.error('Senhas não conferem'); return; }
     setSubmitting(true);
-    const success = await register(name, email, password);
-    setSubmitting(false);
-    if (success) {
-      toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
-      // Navigation handled by useEffect above once session is established
-    } else {
-      toast.error('Erro ao criar conta. Tente novamente.');
+    try {
+      const success = await register(name, email, password);
+      if (success) {
+        toast.success('Conta criada com sucesso! Verifique seu email para confirmar.');
+      } else {
+        toast.error('Erro ao criar conta. Tente novamente.');
+      }
+    } catch (err) {
+      toast.error('Erro inesperado ao criar conta');
+    } finally {
+      setSubmitting(false);
     }
   };
 
