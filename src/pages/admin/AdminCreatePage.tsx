@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAdminLogs } from '@/contexts/AdminLogContext';
+import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -18,7 +19,7 @@ const adminSchema = z.object({
 
 export default function AdminCreatePage() {
   const navigate = useNavigate();
-  const { users, register, user: currentUser } = useAuth();
+  const { user: currentUser, isAdmin } = useAuth();
   const { addLog } = useAdminLogs();
 
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
@@ -31,9 +32,14 @@ export default function AdminCreatePage() {
     setErrors(prev => ({ ...prev, [field]: '' }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+
+    if (!isAdmin) {
+      toast.error('Apenas administradores podem criar novos admins');
+      return;
+    }
 
     const result = adminSchema.safeParse(form);
     if (!result.success) {
@@ -45,54 +51,47 @@ export default function AdminCreatePage() {
       return;
     }
 
-    // Check if email already exists
-    if (users.some(u => u.email.toLowerCase() === form.email.toLowerCase())) {
-      setErrors({ email: 'Este email já está cadastrado' });
-      return;
-    }
-
     setLoading(true);
 
-    // We need to create the admin directly rather than using register (which logs in)
-    // Access localStorage directly for admin creation
     try {
-      const USERS_KEY = 'finance_users';
-      const PASSWORDS_KEY = 'finance_passwords';
+      // Get current session token
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
 
-      const storedUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-      const storedPasswords = JSON.parse(localStorage.getItem(PASSWORDS_KEY) || '{}');
+      // Call the secured edge function
+      const { data, error } = await supabase.functions.invoke('create-admin', {
+        body: {
+          email: form.email.trim(),
+          password: form.password,
+          name: form.name.trim(),
+        },
+      });
 
-      const newAdmin = {
-        id: crypto.randomUUID(),
-        name: form.name.trim(),
-        email: form.email.trim(),
-        role: 'admin' as const,
-        createdAt: new Date().toISOString().split('T')[0],
-        lastLogin: '—',
-        status: 'active' as const,
-      };
-
-      storedUsers.push(newAdmin);
-      storedPasswords[newAdmin.email] = form.password;
-
-      localStorage.setItem(USERS_KEY, JSON.stringify(storedUsers));
-      localStorage.setItem(PASSWORDS_KEY, JSON.stringify(storedPasswords));
-
-      // Force re-read by reloading users state — we dispatch a storage event
-      window.dispatchEvent(new Event('admin-user-created'));
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       addLog({
         adminId: currentUser!.id,
         adminName: currentUser!.name,
         action: 'criou administrador',
-        targetUserId: newAdmin.id,
-        targetUserName: newAdmin.name,
+        targetUserId: data.user_id,
+        targetUserName: form.name.trim(),
       });
 
-      toast.success(`Administrador "${newAdmin.name}" criado com sucesso`);
+      toast.success(`Administrador "${form.name.trim()}" criado com sucesso`);
       navigate('/admin/users');
-    } catch {
-      toast.error('Erro ao criar administrador');
+    } catch (err: any) {
+      console.error('Error creating admin:', err);
+      if (err.message?.includes('Forbidden')) {
+        toast.error('Você não tem permissão para criar administradores');
+      } else if (err.message?.includes('already registered')) {
+        setErrors({ email: 'Este email já está cadastrado' });
+      } else {
+        toast.error(err.message || 'Erro ao criar administrador');
+      }
     } finally {
       setLoading(false);
     }
@@ -187,7 +186,7 @@ export default function AdminCreatePage() {
 
       <div className="finance-card bg-accent/30 border-primary/20">
         <p className="text-xs text-muted-foreground">
-          <strong className="text-foreground">Nota de segurança:</strong> O novo administrador terá acesso completo ao painel administrativo, incluindo gestão de usuários, logs e configurações. Administradores não possuem conta financeira no sistema.
+          <strong className="text-foreground">Nota de segurança:</strong> O novo administrador será criado no Supabase Auth e terá acesso completo ao painel administrativo, incluindo gestão de usuários, logs e configurações.
         </p>
       </div>
     </div>
