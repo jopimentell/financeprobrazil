@@ -33,22 +33,48 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+async function fetchIsAdmin(userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('[auth] Failed to fetch user roles:', error);
+    return false;
+  }
+
+  return data?.some((r: any) => r.role === 'admin') ?? false;
+}
+
+function buildFallbackUser(authUser: SupabaseUser, role: 'user' | 'admin'): User {
+  return {
+    id: authUser.id,
+    name: (authUser.user_metadata as any)?.name || '',
+    email: authUser.email || '',
+    role,
+    createdAt: '',
+    lastLogin: '',
+    status: 'active',
+    currency: 'BRL',
+    closingDay: 1,
+  };
+}
+
 async function fetchProfile(userId: string): Promise<User | null> {
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('*')
     .eq('id', userId)
     .single();
 
+  if (profileError) {
+    console.error('[auth] Failed to fetch profile:', profileError);
+  }
+
   if (!profile) return null;
 
-  // Check role
-  const { data: roles } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', userId);
-
-  const isAdmin = roles?.some((r: any) => r.role === 'admin') ?? false;
+  const isAdmin = await fetchIsAdmin(userId);
 
   return {
     id: profile.id,
@@ -80,14 +106,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       return;
     }
-    const profile = await fetchProfile(session.user.id);
-    setUser(profile);
-    setLoading(false);
 
-    // Update last_login
+    const profile = await fetchProfile(session.user.id);
     if (profile) {
-      await supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', profile.id);
+      setUser(profile);
+      // Update last_login
+      await supabase
+        .from('profiles')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', profile.id);
+    } else {
+      console.warn('[auth] Session exists but profile was not found; using fallback user.');
+      const isAdminRole = await fetchIsAdmin(session.user.id);
+      setUser(buildFallbackUser(session.user, isAdminRole ? 'admin' : 'user'));
     }
+
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -99,7 +133,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       async (_event, session) => {
         if (session?.user) {
           const profile = await fetchProfile(session.user.id);
-          setUser(profile);
+          if (profile) {
+            setUser(profile);
+          } else {
+            console.warn('[auth] Auth state changed but profile was not found; using fallback user.');
+            const isAdminRole = await fetchIsAdmin(session.user.id);
+            setUser(buildFallbackUser(session.user, isAdminRole ? 'admin' : 'user'));
+          }
           setLoading(false);
         } else {
           setUser(null);
@@ -142,8 +182,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isAdmin, user?.id]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return !error;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      console.error('[auth] signInWithPassword failed:', error);
+      return false;
+    }
+
+    const authUser = data.user;
+    if (authUser) {
+      const profile = await fetchProfile(authUser.id);
+      if (profile) {
+        setUser(profile);
+      } else {
+        console.warn('[auth] Login succeeded but profile was not found; using fallback user.');
+        const isAdminRole = await fetchIsAdmin(authUser.id);
+        setUser(buildFallbackUser(authUser, isAdminRole ? 'admin' : 'user'));
+      }
+    }
+
+    return true;
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
