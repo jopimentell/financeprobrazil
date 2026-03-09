@@ -81,6 +81,8 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const uid = user?.id || '';
 
+  const isAdmin = user?.role === 'admin';
+
   const [plans, setPlans] = useState<Plan[]>([]);
   const [planLimits, setPlanLimits] = useState<PlanLimits[]>([]);
   const [planFeatures, setPlanFeatures] = useState<PlanFeatureRelation[]>([]);
@@ -115,17 +117,16 @@ export function PlanProvider({ children }: { children: React.ReactNode }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Fetch user subscription when uid changes
+  // Fetch subscriptions: all for admin, own for regular user
   useEffect(() => {
     if (!uid) { setSubs([]); return; }
-    supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', uid)
-      .then(({ data }) => {
-        if (data) setSubs(data.map(dbToSubscription));
-      });
-  }, [uid]);
+    const query = isAdmin
+      ? supabase.from('subscriptions').select('*')
+      : supabase.from('subscriptions').select('*').eq('user_id', uid);
+    query.then(({ data }) => {
+      if (data) setSubs(data.map(dbToSubscription));
+    });
+  }, [uid, isAdmin]);
 
   const getUserSubscription = useCallback((userId: string) =>
     subscriptions.find(s => s.userId === userId && (s.status === 'active' || s.status === 'trial')),
