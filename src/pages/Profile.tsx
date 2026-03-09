@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { Camera, Save, Lock } from 'lucide-react';
 
@@ -20,44 +20,44 @@ function getInitials(name: string) {
 }
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
   const [phone, setPhone] = useState('');
   const [company, setCompany] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
 
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
 
-  const handleSaveProfile = () => {
-    if (!name.trim() || !email.trim()) {
-      toast.error('Nome e email são obrigatórios');
+  const handleSaveProfile = async () => {
+    if (!name.trim()) {
+      toast.error('Nome é obrigatório');
       return;
     }
-    // Update user in localStorage
+    if (!user) return;
+
+    setSavingProfile(true);
     try {
-      const usersRaw = localStorage.getItem('finance_users');
-      if (usersRaw && user) {
-        const users = JSON.parse(usersRaw);
-        const updated = users.map((u: any) =>
-          u.id === user.id ? { ...u, name, email } : u
-        );
-        localStorage.setItem('finance_users', JSON.stringify(updated));
-        // Update session
-        const session = JSON.parse(localStorage.getItem('finance_session') || '{}');
-        localStorage.setItem('finance_session', JSON.stringify({ ...session, name, email }));
-      }
-    } catch {}
-    toast.success('Dados atualizados com sucesso!');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ name: name.trim() })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      await refreshProfile();
+      toast.success('Dados atualizados com sucesso!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar perfil');
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
-  const handleChangePassword = () => {
-    if (!currentPassword) {
-      toast.error('Informe a senha atual');
-      return;
-    }
+  const handleChangePassword = async () => {
     if (newPassword.length < 6) {
       toast.error('A nova senha deve ter pelo menos 6 caracteres');
       return;
@@ -66,22 +66,21 @@ export default function Profile() {
       toast.error('As senhas não coincidem');
       return;
     }
-    // Verify current password
+
+    setChangingPassword(true);
     try {
-      const passwords = JSON.parse(localStorage.getItem('finance_passwords') || '{}');
-      if (user && passwords[user.email] !== currentPassword) {
-        toast.error('Senha atual incorreta');
-        return;
-      }
-      if (user) {
-        passwords[user.email] = newPassword;
-        localStorage.setItem('finance_passwords', JSON.stringify(passwords));
-      }
-    } catch {}
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    toast.success('Senha atualizada com sucesso!');
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+      if (error) throw error;
+
+      setNewPassword('');
+      setConfirmPassword('');
+      toast.success('Senha atualizada com sucesso!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar senha');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   if (!user) return null;
@@ -123,7 +122,8 @@ export default function Profile() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} />
+              <Input id="email" type="email" value={email} disabled className="bg-muted" />
+              <p className="text-xs text-muted-foreground">Email não pode ser alterado</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="phone">Telefone</Label>
@@ -134,9 +134,9 @@ export default function Profile() {
               <Input id="company" placeholder="Opcional" value={company} onChange={e => setCompany(e.target.value)} />
             </div>
           </div>
-          <Button onClick={handleSaveProfile} className="w-full sm:w-auto">
+          <Button onClick={handleSaveProfile} disabled={savingProfile} className="w-full sm:w-auto">
             <Save className="h-4 w-4 mr-2" />
-            Salvar alterações
+            {savingProfile ? 'Salvando...' : 'Salvar alterações'}
           </Button>
         </CardContent>
       </Card>
@@ -150,22 +150,33 @@ export default function Profile() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="current-password">Senha atual</Label>
-            <Input id="current-password" type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} />
-          </div>
+          <p className="text-sm text-muted-foreground">
+            Digite sua nova senha abaixo. A alteração é aplicada imediatamente.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="new-password">Nova senha</Label>
-              <Input id="new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+              <Input 
+                id="new-password" 
+                type="password" 
+                value={newPassword} 
+                onChange={e => setNewPassword(e.target.value)} 
+                placeholder="Mínimo 6 caracteres"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirmar nova senha</Label>
-              <Input id="confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+              <Input 
+                id="confirm-password" 
+                type="password" 
+                value={confirmPassword} 
+                onChange={e => setConfirmPassword(e.target.value)} 
+                placeholder="Repita a senha"
+              />
             </div>
           </div>
-          <Button onClick={handleChangePassword} variant="outline" className="w-full sm:w-auto">
-            Atualizar senha
+          <Button onClick={handleChangePassword} disabled={changingPassword} variant="outline" className="w-full sm:w-auto">
+            {changingPassword ? 'Atualizando...' : 'Atualizar senha'}
           </Button>
         </CardContent>
       </Card>
