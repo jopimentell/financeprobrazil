@@ -60,7 +60,7 @@ export default function PlansPage() {
 
               <div className="flex items-center gap-3 mb-4">
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isPro ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                  {planIcons[plan.id] || <Zap className="h-6 w-6" />}
+                  {planIconsByName[plan.name] || <Zap className="h-6 w-6" />}
                 </div>
                 <div>
                   <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
