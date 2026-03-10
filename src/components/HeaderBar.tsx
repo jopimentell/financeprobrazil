@@ -19,7 +19,7 @@ function getInitials(name: string) {
 
 export function HeaderBar() {
   const { syncToSheet } = useFinance();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleSync = () => {
