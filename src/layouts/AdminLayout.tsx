@@ -112,13 +112,20 @@ export default function AdminLayout() {
             </button>
             <span className="text-sm font-medium text-muted-foreground">Painel Administrativo</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-7 h-7 rounded-full bg-destructive/10 flex items-center justify-center">
                 <Shield className="h-3.5 w-3.5 text-destructive" />
               </div>
               <span className="text-sm font-medium text-foreground max-w-[120px] truncate hidden sm:block">{user.name}</span>
             </div>
+            <button
+              onClick={handleLogout}
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Sair</span>
+            </button>
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">
