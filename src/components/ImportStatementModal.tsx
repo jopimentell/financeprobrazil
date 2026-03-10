@@ -269,7 +269,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="p-0">
+      <DialogContent className="p-0 w-[95vw] max-w-[900px] max-h-[90vh] flex flex-col">
         <DialogHeader className="p-4 sm:p-6 border-b border-border shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" />

@@ -1,10 +1,11 @@
 import { MobileMenuDrawer } from './SidebarNavigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Cloud } from 'lucide-react';
+import { Cloud, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 function getInitials(name: string) {
   return name
@@ -18,7 +19,7 @@ function getInitials(name: string) {
 
 export function HeaderBar() {
   const { syncToSheet } = useFinance();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleSync = () => {
@@ -52,16 +53,32 @@ export function HeaderBar() {
         </button>
 
         {user && (
-          <button
-            onClick={() => navigate('/perfil')}
-            className="p-0.5 rounded-full hover:ring-2 hover:ring-primary/30 transition-all"
-          >
-            <Avatar className="h-8 w-8">
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                {getInitials(user.name)}
-              </AvatarFallback>
-            </Avatar>
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="p-0.5 rounded-full hover:ring-2 hover:ring-primary/30 transition-all">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                    {getInitials(user.name)}
+                  </AvatarFallback>
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate('/perfil')}>
+                Perfil
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={async () => {
+                  await logout();
+                  navigate('/login');
+                }}
+                className="text-destructive focus:text-destructive"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
     </header>
