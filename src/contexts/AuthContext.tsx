@@ -34,17 +34,20 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 async function fetchIsAdmin(userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('user_roles')
-    .select('role')
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('[auth] Failed to fetch user roles:', error);
+  try {
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+    if (error) {
+      console.error('[auth] Failed to fetch user roles:', error);
+      return false;
+    }
+    return data?.some((r: any) => r.role === 'admin') ?? false;
+  } catch (err) {
+    console.error('[auth] Exception in fetchIsAdmin:', err);
     return false;
   }
-
-  return data?.some((r: any) => r.role === 'admin') ?? false;
 }
 
 function buildFallbackUser(authUser: SupabaseUser, role: 'user' | 'admin'): User {
@@ -62,31 +65,42 @@ function buildFallbackUser(authUser: SupabaseUser, role: 'user' | 'admin'): User
 }
 
 async function fetchProfile(userId: string): Promise<User | null> {
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', userId)
-    .single();
+  try {
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
 
-  if (profileError) {
-    console.error('[auth] Failed to fetch profile:', profileError);
+    if (profileError || !profile) {
+      console.warn('[auth] Profile not found for user:', userId, profileError?.message);
+      return null;
+    }
+
+    const isAdmin = await fetchIsAdmin(userId);
+
+    return {
+      id: profile.id,
+      name: profile.name || '',
+      email: profile.email || '',
+      role: isAdmin ? 'admin' : 'user',
+      createdAt: profile.created_at?.split('T')[0] || '',
+      lastLogin: profile.last_login?.split('T')[0] || '',
+      status: (profile.status as 'active' | 'inactive') || 'active',
+      currency: profile.currency || 'BRL',
+      closingDay: profile.closing_day || 1,
+    };
+  } catch (err) {
+    console.error('[auth] Exception in fetchProfile:', err);
+    return null;
   }
+}
 
-  if (!profile) return null;
-
-  const isAdmin = await fetchIsAdmin(userId);
-
-  return {
-    id: profile.id,
-    name: profile.name || '',
-    email: profile.email || '',
-    role: isAdmin ? 'admin' : 'user',
-    createdAt: profile.created_at?.split('T')[0] || '',
-    lastLogin: profile.last_login?.split('T')[0] || '',
-    status: (profile.status as 'active' | 'inactive') || 'active',
-    currency: profile.currency || 'BRL',
-    closingDay: profile.closing_day || 1,
-  };
+async function resolveUser(authUser: SupabaseUser): Promise<User> {
+  const profile = await fetchProfile(authUser.id);
+  if (profile) return profile;
+  const isAdminRole = await fetchIsAdmin(authUser.id);
+  return buildFallbackUser(authUser, isAdminRole ? 'admin' : 'user');
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -99,121 +113,111 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const activeUser = impersonating || user;
   const isAdmin = user?.role === 'admin';
 
-  // Load user profile from Supabase session
-  const loadUser = useCallback(async (session: Session | null) => {
-    if (!session?.user) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
-    const profile = await fetchProfile(session.user.id);
-    if (profile) {
-      setUser(profile);
-      // Update last_login
-      await supabase
-        .from('profiles')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', profile.id);
-    } else {
-      console.warn('[auth] Session exists but profile was not found; using fallback user.');
-      const isAdminRole = await fetchIsAdmin(session.user.id);
-      setUser(buildFallbackUser(session.user, isAdminRole ? 'admin' : 'user'));
-    }
-
-    setLoading(false);
-  }, []);
-
   useEffect(() => {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    // Set up auth state listener FIRST
+    // Safety timeout — never leave user on white screen
+    const timeout = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) console.warn('[auth] Loading timeout — forcing loading=false');
+        return false;
+      });
+    }, 8000);
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        if (session?.user) {
-          const profile = await fetchProfile(session.user.id);
-          if (profile) {
-            setUser(profile);
+        try {
+          if (session?.user) {
+            const resolved = await resolveUser(session.user);
+            setUser(resolved);
+            // Update last_login fire-and-forget
+            supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', resolved.id).then(() => {});
           } else {
-            console.warn('[auth] Auth state changed but profile was not found; using fallback user.');
-            const isAdminRole = await fetchIsAdmin(session.user.id);
-            setUser(buildFallbackUser(session.user, isAdminRole ? 'admin' : 'user'));
+            setUser(null);
           }
-          setLoading(false);
-        } else {
+        } catch (err) {
+          console.error('[auth] onAuthStateChange error:', err);
           setUser(null);
+        } finally {
           setLoading(false);
+          clearTimeout(timeout);
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      loadUser(session);
+    // Check existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      try {
+        if (session?.user) {
+          const resolved = await resolveUser(session.user);
+          setUser(resolved);
+        } else {
+          setUser(null);
+        }
+      } catch (err) {
+        console.error('[auth] getSession error:', err);
+        setUser(null);
+      } finally {
+        setLoading(false);
+        clearTimeout(timeout);
+      }
     });
 
-    return () => subscription.unsubscribe();
-  }, [loadUser]);
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Load all users for admin
   useEffect(() => {
     if (!isAdmin) { setUsers([]); return; }
     (async () => {
-      const { data: profiles } = await supabase.from('profiles').select('*');
-      if (!profiles) return;
-
-      const { data: allRoles } = await supabase.from('user_roles').select('*');
-      const roleMap = new Map<string, string>();
-      allRoles?.forEach((r: any) => { if (r.role === 'admin') roleMap.set(r.user_id, 'admin'); });
-
-      setUsers(profiles.map((p: any) => ({
-        id: p.id,
-        name: p.name || '',
-        email: p.email || '',
-        role: (roleMap.get(p.id) === 'admin' ? 'admin' : 'user') as 'user' | 'admin',
-        createdAt: p.created_at?.split('T')[0] || '',
-        lastLogin: p.last_login?.split('T')[0] || '',
-        status: p.status || 'active',
-        currency: p.currency || 'BRL',
-        closingDay: p.closing_day || 1,
-      })));
+      try {
+        const { data: profiles } = await supabase.from('profiles').select('*');
+        if (!profiles) return;
+        const { data: allRoles } = await supabase.from('user_roles').select('*');
+        const roleMap = new Map<string, string>();
+        allRoles?.forEach((r: any) => { if (r.role === 'admin') roleMap.set(r.user_id, 'admin'); });
+        setUsers(profiles.map((p: any) => ({
+          id: p.id, name: p.name || '', email: p.email || '',
+          role: (roleMap.get(p.id) === 'admin' ? 'admin' : 'user') as 'user' | 'admin',
+          createdAt: p.created_at?.split('T')[0] || '', lastLogin: p.last_login?.split('T')[0] || '',
+          status: p.status || 'active', currency: p.currency || 'BRL', closingDay: p.closing_day || 1,
+        })));
+      } catch (err) {
+        console.error('[auth] Failed to load admin users:', err);
+      }
     })();
   }, [isAdmin, user?.id]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      console.error('[auth] signInWithPassword failed:', error);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) { console.error('[auth] signInWithPassword failed:', error); return false; }
+      if (data.user) {
+        const resolved = await resolveUser(data.user);
+        setUser(resolved);
+      }
+      return true;
+    } catch (err) {
+      console.error('[auth] login exception:', err);
       return false;
     }
-
-    const authUser = data.user;
-    if (authUser) {
-      const profile = await fetchProfile(authUser.id);
-      if (profile) {
-        setUser(profile);
-      } else {
-        console.warn('[auth] Login succeeded but profile was not found; using fallback user.');
-        const isAdminRole = await fetchIsAdmin(authUser.id);
-        setUser(buildFallbackUser(authUser, isAdminRole ? 'admin' : 'user'));
-      }
-    }
-
-    return true;
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name },
-        emailRedirectTo: window.location.origin,
-      },
-    });
-    return !error;
+    try {
+      const { error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { name }, emailRedirectTo: window.location.origin },
+      });
+      return !error;
+    } catch (err) {
+      console.error('[auth] register exception:', err);
+      return false;
+    }
   }, []);
 
   const logout = useCallback(async () => {
@@ -246,8 +250,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [users]);
 
   const deleteUser = useCallback(async (userId: string) => {
-    // Note: actual user deletion requires admin API / edge function
-    // For now we mark as inactive
     await supabase.from('profiles').update({ status: 'inactive' }).eq('id', userId);
     setUsers(prev => prev.filter(u => u.id !== userId));
   }, []);
@@ -258,18 +260,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (profile) setImpersonating(profile);
   }, [isAdmin]);
 
-  const stopImpersonation = useCallback(() => {
-    setImpersonating(null);
-  }, []);
+  const stopImpersonation = useCallback(() => { setImpersonating(null); }, []);
 
   return (
     <AuthContext.Provider value={{
-      user: activeUser, users, isAdmin,
-      impersonating, loading,
-      login, register, logout,
-      updateUserRole, toggleUserStatus, deleteUser,
-      startImpersonation, stopImpersonation,
-      refreshProfile,
+      user: activeUser, users, isAdmin, impersonating, loading,
+      login, register, logout, updateUserRole, toggleUserStatus, deleteUser,
+      startImpersonation, stopImpersonation, refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>
