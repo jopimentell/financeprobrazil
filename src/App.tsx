@@ -49,63 +49,65 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <PlanProvider>
-          <FinanceProvider>
-            <AdminLogProvider>
-              <ImpersonationProvider>
-              <Toaster />
-              <Sonner />
-              <ImpersonationBanner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Welcome />} />
-                  <Route element={<AuthLayout />}>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                  </Route>
-                  {/* User financial routes */}
-                  <Route element={<AppLayout />}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/transacoes" element={<Transactions />} />
-                    <Route path="/transacoes/nova" element={<Transactions />} />
-                    <Route path="/receitas" element={<Receitas />} />
-                    <Route path="/despesas" element={<Despesas />} />
-                    <Route path="/planejamento" element={<Planning />} />
-                    <Route path="/calendario" element={<Calendar />} />
-                    <Route path="/categorias" element={<Categories />} />
-                    <Route path="/contas" element={<Accounts />} />
-                    <Route path="/dividas" element={<Debts />} />
-                    <Route path="/cartoes" element={<CreditCardsPage />} />
-                    <Route path="/investimentos" element={<Investments />} />
-                    <Route path="/projecao" element={<ForecastPage />} />
-                    <Route path="/relatorios" element={<Reports />} />
-                    <Route path="/plans" element={<PlansPage />} />
-                    <Route path="/account/subscription" element={<SubscriptionPage />} />
-                    <Route path="/perfil" element={<ProfilePage />} />
-                  </Route>
-                  {/* Admin routes */}
-                  <Route element={<AdminLayout />}>
-                    <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-                    <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-                    <Route path="/admin/users" element={<AdminUsersPage />} />
-                    <Route path="/admin/users/:id" element={<AdminUserDetailPage />} />
-                    <Route path="/admin/admins/create" element={<AdminCreatePage />} />
-                    <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
-                    <Route path="/admin/security" element={<AdminSecurityPage />} />
-                    <Route path="/admin/logs" element={<AdminLogsPage />} />
-                    <Route path="/admin/settings" element={<AdminSettingsPage />} />
-                    <Route path="/admin/plans" element={<AdminPlansPage />} />
-                    <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-              </ImpersonationProvider>
-            </AdminLogProvider>
-          </FinanceProvider>
-        </PlanProvider>
-      </AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
+          <PlanProvider>
+            <FinanceProvider>
+              <AdminLogProvider>
+                <ImpersonationProvider>
+                <Toaster />
+                <Sonner />
+                <ImpersonationBanner />
+                <BrowserRouter>
+                  <Routes>
+                    <Route path="/" element={<Welcome />} />
+                    <Route element={<AuthLayout />}>
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                    </Route>
+                    {/* User financial routes */}
+                    <Route element={<AppLayout />}>
+                      <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+                      <Route path="/transacoes" element={<ErrorBoundary><Transactions /></ErrorBoundary>} />
+                      <Route path="/transacoes/nova" element={<ErrorBoundary><Transactions /></ErrorBoundary>} />
+                      <Route path="/receitas" element={<ErrorBoundary><Receitas /></ErrorBoundary>} />
+                      <Route path="/despesas" element={<ErrorBoundary><Despesas /></ErrorBoundary>} />
+                      <Route path="/planejamento" element={<ErrorBoundary><Planning /></ErrorBoundary>} />
+                      <Route path="/calendario" element={<ErrorBoundary><Calendar /></ErrorBoundary>} />
+                      <Route path="/categorias" element={<ErrorBoundary><Categories /></ErrorBoundary>} />
+                      <Route path="/contas" element={<ErrorBoundary><Accounts /></ErrorBoundary>} />
+                      <Route path="/dividas" element={<ErrorBoundary><Debts /></ErrorBoundary>} />
+                      <Route path="/cartoes" element={<ErrorBoundary><CreditCardsPage /></ErrorBoundary>} />
+                      <Route path="/investimentos" element={<ErrorBoundary><Investments /></ErrorBoundary>} />
+                      <Route path="/projecao" element={<ErrorBoundary><ForecastPage /></ErrorBoundary>} />
+                      <Route path="/relatorios" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
+                      <Route path="/plans" element={<ErrorBoundary><PlansPage /></ErrorBoundary>} />
+                      <Route path="/account/subscription" element={<ErrorBoundary><SubscriptionPage /></ErrorBoundary>} />
+                      <Route path="/perfil" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+                    </Route>
+                    {/* Admin routes */}
+                    <Route element={<AdminLayout />}>
+                      <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+                      <Route path="/admin/dashboard" element={<ErrorBoundary><AdminDashboardPage /></ErrorBoundary>} />
+                      <Route path="/admin/users" element={<ErrorBoundary><AdminUsersPage /></ErrorBoundary>} />
+                      <Route path="/admin/users/:id" element={<ErrorBoundary><AdminUserDetailPage /></ErrorBoundary>} />
+                      <Route path="/admin/admins/create" element={<ErrorBoundary><AdminCreatePage /></ErrorBoundary>} />
+                      <Route path="/admin/analytics" element={<ErrorBoundary><AdminAnalyticsPage /></ErrorBoundary>} />
+                      <Route path="/admin/security" element={<ErrorBoundary><AdminSecurityPage /></ErrorBoundary>} />
+                      <Route path="/admin/logs" element={<ErrorBoundary><AdminLogsPage /></ErrorBoundary>} />
+                      <Route path="/admin/settings" element={<ErrorBoundary><AdminSettingsPage /></ErrorBoundary>} />
+                      <Route path="/admin/plans" element={<ErrorBoundary><AdminPlansPage /></ErrorBoundary>} />
+                      <Route path="/admin/subscriptions" element={<ErrorBoundary><AdminSubscriptionsPage /></ErrorBoundary>} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+                </ImpersonationProvider>
+              </AdminLogProvider>
+            </FinanceProvider>
+          </PlanProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </TooltipProvider>
   </QueryClientProvider>
 );
