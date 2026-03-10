@@ -1,10 +1,11 @@
 import { MobileMenuDrawer } from './SidebarNavigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Cloud } from 'lucide-react';
+import { Cloud, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 function getInitials(name: string) {
   return name
