@@ -352,7 +352,7 @@ export function ImportStatementModal({ open, onClose }: Props) {
             {/* Column mapping selectors */}
             <div className="space-y-2">
               <p className="text-sm font-medium">Defina o que cada coluna representa:</p>
-              <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${Math.min(mappings.length, 6)}, 1fr)` }}>
+              <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 {mappings.map((m, i) => (
                   <div key={i} className="space-y-1">
                     <p className="text-xs text-muted-foreground truncate" title={m.columnHeader}>{m.columnHeader}</p>
