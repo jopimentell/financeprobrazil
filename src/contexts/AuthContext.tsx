@@ -38,12 +38,16 @@ async function fetchIsAdmin(userId: string): Promise<boolean> {
     const { data, error } = await supabase
       .from('user_roles')
       .select('role')
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('role', 'admin')
+      .maybeSingle();
+
     if (error) {
       console.error('[auth] Failed to fetch user roles:', error);
       return false;
     }
-    return data?.some((r: any) => r.role === 'admin') ?? false;
+
+    return Boolean(data);
   } catch (err) {
     console.error('[auth] Exception in fetchIsAdmin:', err);
     return false;
