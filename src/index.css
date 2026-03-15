@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --background: 0 0% 98%;
+    --foreground: 224 71% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 71% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 224 71% 4%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 71% 4%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
+
+    --finance-income: 142 71% 45%;
+    --finance-expense: 0 84% 60%;
+    --finance-info: 221 83% 53%;
+    --finance-warning: 45 93% 47%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 224 71% 4%;
+    --sidebar-primary: 221 83% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 14% 96%;
+    --sidebar-accent-foreground: 224 71% 4%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 221 83% 53%;
+    --sidebar-muted: 220 9% 46%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  .finance-card {
+    @apply bg-card rounded-xl border border-border p-5 transition-all;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  }
+  .finance-card:hover {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.06);
+  }
+  .finance-metric {
+    @apply finance-card flex flex-col gap-3 p-5 md:p-6 transition-all duration-200;
+  }
+  .finance-metric:hover {
+    @apply shadow-md;
+    transform: translateY(-1px);
+  }
+  .finance-metric:active {
+    transform: scale(0.98);
+  }
+  .finance-income {
+    color: hsl(var(--finance-income));
+  }
+  .finance-expense {
+    color: hsl(var(--finance-expense));
+  }
+  .finance-info {
+    color: hsl(var(--finance-info));
+  }
+  .finance-warning {
+    color: hsl(var(--finance-warning));
+  }
+  .btn-income {
+    background-color: hsl(142 71% 45%);
+    @apply text-white transition-colors;
+  }
+  .btn-income:hover {
+    background-color: hsl(142 71% 40%);
+  }
+  .btn-expense {
+    background-color: hsl(0 84% 60%);
+    @apply text-white transition-colors;
+  }
+  .btn-expense:hover {
+    background-color: hsl(0 84% 55%);
+  }
+  .input-field {
+    @apply w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring transition-colors;
+  }
+}
