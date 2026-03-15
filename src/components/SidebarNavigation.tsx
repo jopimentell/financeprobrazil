@@ -25,6 +25,15 @@ const navItems = [
   { path: '/plans', label: 'Planos', icon: Crown },
 ];
 
+// Bottom nav: 5 most important items
+const bottomNavItems = [
+  { path: '/dashboard', label: 'Início', icon: LayoutDashboard },
+  { path: '/transacoes', label: 'Transações', icon: ArrowLeftRight },
+  { path: '/contas', label: 'Contas', icon: Wallet },
+  { path: '/relatorios', label: 'Relatórios', icon: FileBarChart },
+  { path: '/perfil', label: 'Perfil', icon: User },
+];
+
 export function SidebarNavigation({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
   const location = useLocation();
 
@@ -68,17 +77,22 @@ export function SidebarNavigation({ collapsed, onToggle }: { collapsed: boolean;
 
 export function MobileBottomNavigation() {
   const location = useLocation();
-  const mainItems = navItems.slice(0, 5);
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
-      <div className="flex justify-around py-2">
-        {mainItems.map(item => {
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40 safe-area-bottom">
+      <div className="flex justify-around py-1.5 px-1">
+        {bottomNavItems.map(item => {
           const active = location.pathname === item.path;
           return (
-            <Link key={item.path} to={item.path} className={`flex flex-col items-center gap-0.5 px-2 py-1 text-xs transition-colors ${active ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-lg text-[10px] transition-colors min-w-[56px] min-h-[44px] justify-center ${
+                active ? 'text-primary font-semibold' : 'text-muted-foreground'
+              }`}
+            >
               <item.icon className="h-5 w-5" />
-              <span className="truncate max-w-[56px]">{item.label}</span>
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
@@ -101,7 +115,7 @@ export function MobileMenuDrawer() {
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-accent">
+      <button onClick={() => setOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-accent min-h-[44px] min-w-[44px] flex items-center justify-center">
         <Menu className="h-5 w-5" />
       </button>
       {open && (
@@ -115,7 +129,9 @@ export function MobileMenuDrawer() {
                 </div>
                 <h2 className="text-base font-bold">FinancePro</h2>
               </div>
-              <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-accent"><X className="h-5 w-5" /></button>
+              <button onClick={() => setOpen(false)} className="p-2 rounded-lg hover:bg-accent min-h-[44px] min-w-[44px] flex items-center justify-center">
+                <X className="h-5 w-5" />
+              </button>
             </div>
             <nav className="space-y-0.5 flex-1 overflow-y-auto">
               {navItems.map(item => {
@@ -125,7 +141,7 @@ export function MobileMenuDrawer() {
                     key={item.path}
                     to={item.path}
                     onClick={() => setOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]
                       ${active ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
                   >
                     <item.icon style={{ width: 18, height: 18 }} />
@@ -139,7 +155,7 @@ export function MobileMenuDrawer() {
               <Link
                 to="/perfil"
                 onClick={() => setOpen(false)}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all min-h-[44px]
                   ${location.pathname === '/perfil' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
               >
                 <User style={{ width: 18, height: 18 }} />
@@ -147,7 +163,7 @@ export function MobileMenuDrawer() {
               </Link>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all w-full"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-all w-full min-h-[44px]"
               >
                 <LogOut style={{ width: 18, height: 18 }} />
                 <span>Sair</span>
