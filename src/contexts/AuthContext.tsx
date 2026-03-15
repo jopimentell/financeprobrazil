@@ -226,11 +226,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) { console.error('[auth] signInWithPassword failed:', error); return false; }
-      if (data.user) {
-        const resolved = await resolveUser(data.user);
-        setUser(resolved);
+      if (error) {
+        console.error('[auth] signInWithPassword failed:', error);
+        return false;
       }
+
+      if (data.user) {
+        setUser(prev => (prev?.id === data.user.id ? prev : buildFallbackUser(data.user, 'user')));
+        void resolveUser(data.user)
+          .then((resolved) => setUser(resolved))
+          .catch((err) => console.error('[auth] resolveUser after login failed:', err));
+      }
+
       return true;
     } catch (err) {
       console.error('[auth] login exception:', err);
@@ -252,8 +259,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (data.session?.user) {
-        const resolved = await resolveUser(data.session.user);
-        setUser(resolved);
+        setUser(buildFallbackUser(data.session.user, 'user'));
+        void resolveUser(data.session.user)
+          .then((resolved) => setUser(resolved))
+          .catch((err) => console.error('[auth] resolveUser after register failed:', err));
       }
 
       return true;
