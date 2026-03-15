@@ -236,11 +236,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const register = useCallback(async (name: string, email: string, password: string): Promise<boolean> => {
     try {
-      const { error } = await supabase.auth.signUp({
-        email, password,
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
         options: { data: { name }, emailRedirectTo: window.location.origin },
       });
-      return !error;
+
+      if (error) {
+        console.error('[auth] signUp failed:', error);
+        return false;
+      }
+
+      if (data.session?.user) {
+        const resolved = await resolveUser(data.session.user);
+        setUser(resolved);
+      }
+
+      return true;
     } catch (err) {
       console.error('[auth] register exception:', err);
       return false;
