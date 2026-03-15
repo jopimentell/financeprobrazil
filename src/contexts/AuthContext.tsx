@@ -70,20 +70,18 @@ async function fetchProfile(userId: string): Promise<User | null> {
       .from('profiles')
       .select('*')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (profileError || !profile) {
       console.warn('[auth] Profile not found for user:', userId, profileError?.message);
       return null;
     }
 
-    const isAdmin = await fetchIsAdmin(userId);
-
     return {
       id: profile.id,
       name: profile.name || '',
       email: profile.email || '',
-      role: isAdmin ? 'admin' : 'user',
+      role: 'user',
       createdAt: profile.created_at?.split('T')[0] || '',
       lastLogin: profile.last_login?.split('T')[0] || '',
       status: (profile.status as 'active' | 'inactive') || 'active',
@@ -97,10 +95,23 @@ async function fetchProfile(userId: string): Promise<User | null> {
 }
 
 async function resolveUser(authUser: SupabaseUser): Promise<User> {
-  const profile = await fetchProfile(authUser.id);
-  if (profile) return profile;
-  const isAdminRole = await fetchIsAdmin(authUser.id);
-  return buildFallbackUser(authUser, isAdminRole ? 'admin' : 'user');
+  const fallback = buildFallbackUser(authUser, 'user');
+
+  try {
+    const [profile, isAdminRole] = await Promise.all([
+      fetchProfile(authUser.id),
+      fetchIsAdmin(authUser.id),
+    ]);
+
+    if (!profile) {
+      return { ...fallback, role: isAdminRole ? 'admin' : 'user' };
+    }
+
+    return { ...profile, role: isAdminRole ? 'admin' : 'user' };
+  } catch (err) {
+    console.error('[auth] Exception in resolveUser:', err);
+    return fallback;
+  }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -117,55 +128,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (initializedRef.current) return;
     initializedRef.current = true;
 
-    // Safety timeout — never leave user on white screen
-    const timeout = setTimeout(() => {
-      setLoading(prev => {
-        if (prev) console.warn('[auth] Loading timeout — forcing loading=false');
-        return false;
-      });
-    }, 8000);
+    let mounted = true;
+    let requestId = 0;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        try {
-          if (session?.user) {
-            const resolved = await resolveUser(session.user);
-            setUser(resolved);
-            // Update last_login fire-and-forget
-            supabase.from('profiles').update({ last_login: new Date().toISOString() }).eq('id', resolved.id).then(() => {});
-          } else {
-            setUser(null);
-          }
-        } catch (err) {
-          console.error('[auth] onAuthStateChange error:', err);
-          setUser(null);
-        } finally {
-          setLoading(false);
-          clearTimeout(timeout);
-        }
-      }
-    );
+    const applySession = async (session: Session | null) => {
+      const currentRequestId = ++requestId;
 
-    // Check existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      try {
-        if (session?.user) {
-          const resolved = await resolveUser(session.user);
-          setUser(resolved);
-        } else {
-          setUser(null);
-        }
-      } catch (err) {
-        console.error('[auth] getSession error:', err);
+      if (!session?.user) {
+        if (!mounted || currentRequestId !== requestId) return;
+        setImpersonating(null);
         setUser(null);
-      } finally {
         setLoading(false);
-        clearTimeout(timeout);
+        return;
       }
+
+      try {
+        const resolved = await resolveUser(session.user);
+        if (!mounted || currentRequestId !== requestId) return;
+        setUser(resolved);
+      } catch (err) {
+        console.error('[auth] applySession error:', err);
+        if (!mounted || currentRequestId !== requestId) return;
+        setUser(buildFallbackUser(session.user, 'user'));
+      } finally {
+        if (mounted && currentRequestId === requestId) {
+          setLoading(false);
+        }
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      queueMicrotask(() => {
+        if (!mounted) return;
+
+        if (event === 'SIGNED_OUT') {
+          setImpersonating(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          void applySession(session);
+
+          if (session?.user) {
+            void supabase
+              .from('profiles')
+              .update({ last_login: new Date().toISOString() })
+              .eq('id', session.user.id);
+          }
+        }
+      });
     });
 
+    void supabase.auth.getSession()
+      .then(({ data: { session } }) => applySession(session))
+      .catch((err) => {
+        console.error('[auth] getSession error:', err);
+        if (!mounted) return;
+        setUser(null);
+        setLoading(false);
+      });
+
     return () => {
-      clearTimeout(timeout);
+      mounted = false;
+      requestId += 1;
       subscription.unsubscribe();
     };
   }, []);
