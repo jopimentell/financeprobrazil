@@ -12,7 +12,7 @@ export default function Welcome() {
     if (!loading && user) {
       navigate(user.role === 'admin' ? '/admin/dashboard' : '/dashboard', { replace: true });
     }
-  }, [user, navigate]);
+  }, [loading, user, navigate]);
 
   // Splash timer
   useEffect(() => {
@@ -20,7 +20,13 @@ export default function Welcome() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (user) return null;
+  if (loading || user) {
+    return (
+      <div className="fixed inset-0 bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Splash Screen
   if (showSplash) {
