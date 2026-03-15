@@ -42,7 +42,7 @@ const DialogContent = React.forwardRef<
         "inset-x-0 bottom-0 mx-auto w-[95vw] h-[90vh] rounded-t-2xl p-4",
         "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
         // Tablet
-        "sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:inset-x-auto  sm:w-[90vw] sm:max-w-[700px] sm:h-auto sm:max-h-[85vh] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6",
+        "sm:left-1/2 sm:top-1/2 sm:bottom-auto sm:right-auto  sm:w-[90vw] sm:max-w-[700px] sm:h-auto sm:max-h-[85vh] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6",
         // Desktop
         "lg:w-[80vw] lg:max-w-[1100px]",
         "sm:data-[state=closed]:fade-out-0 sm:data-[state=open]:fade-in-0 sm:data-[state=closed]:zoom-out-95 sm:data-[state=open]:zoom-in-95",
