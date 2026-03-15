@@ -292,35 +292,59 @@ export default function Dashboard() {
         if (!annualView) return null;
         return (
           <DashboardSortableCard id="annual-table" key="annual-table" className="col-span-full">
-            <div className="finance-card overflow-x-auto">
+            <div className="finance-card">
               <h3 className="text-sm font-medium text-muted-foreground mb-3">Resumo por Mês</h3>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left py-2 px-2">Mês</th>
-                    <th className="text-right py-2 px-2">Receitas</th>
-                    <th className="text-right py-2 px-2">Despesas</th>
-                    <th className="text-right py-2 px-2">Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {monthNames.map((name, i) => {
-                    const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
-                    const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-                    const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-                    return (
-                      <tr key={i} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                        <td className="py-2.5 px-2">{name}</td>
-                        <td className="py-2.5 px-2 text-right finance-income">R$ {inc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td className="py-2.5 px-2 text-right finance-expense">R$ {exp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td className={`py-2.5 px-2 text-right font-semibold ${inc - exp >= 0 ? 'finance-income' : 'finance-expense'}`}>
+              {/* Mobile: Cards */}
+              <div className="md:hidden space-y-2">
+                {monthNames.map((name, i) => {
+                  const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
+                  const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+                  const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+                  if (inc === 0 && exp === 0) return null;
+                  return (
+                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+                      <span className="text-sm font-medium">{name}</span>
+                      <div className="flex gap-4 text-xs">
+                        <span className="finance-income">+R$ {inc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <span className="finance-expense">-R$ {exp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        <span className={`font-semibold ${inc - exp >= 0 ? 'finance-income' : 'finance-expense'}`}>
                           R$ {(inc - exp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Desktop: Table */}
+              <div className="hidden md:block">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left py-2 px-2">Mês</th>
+                      <th className="text-right py-2 px-2">Receitas</th>
+                      <th className="text-right py-2 px-2">Despesas</th>
+                      <th className="text-right py-2 px-2">Saldo</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthNames.map((name, i) => {
+                      const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
+                      const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+                      const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+                      return (
+                        <tr key={i} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
+                          <td className="py-2.5 px-2">{name}</td>
+                          <td className="py-2.5 px-2 text-right finance-income">R$ {inc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className="py-2.5 px-2 text-right finance-expense">R$ {exp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                          <td className={`py-2.5 px-2 text-right font-semibold ${inc - exp >= 0 ? 'finance-income' : 'finance-expense'}`}>
+                            R$ {(inc - exp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </DashboardSortableCard>
         );
