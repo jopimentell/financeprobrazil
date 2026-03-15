@@ -63,6 +63,7 @@ const App = () => (
                     <Route path="/" element={<Welcome />} />
                     <Route element={<AuthLayout />}>
                       <Route path="/login" element={<Login />} />
+                      <Route path="/register" element={<Navigate to="/login?mode=register" replace />} />
                       <Route path="/reset-password" element={<ResetPassword />} />
                     </Route>
                     {/* User financial routes */}
