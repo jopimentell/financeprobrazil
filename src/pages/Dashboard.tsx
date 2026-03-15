@@ -340,8 +340,21 @@ export default function Dashboard() {
     }
   };
 
+  const greeting = (() => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
+  })();
+
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
+      {/* Greeting */}
+      <div>
+        <h1 className="text-xl font-bold">{greeting}{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Aqui está seu resumo financeiro</p>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {annualView ? (
