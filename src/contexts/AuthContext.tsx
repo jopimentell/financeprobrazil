@@ -255,8 +255,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshProfile = useCallback(async () => {
     if (!user) return;
-    const profile = await fetchProfile(user.id);
-    if (profile) setUser(profile);
+
+    const [profile, isAdminRole] = await Promise.all([
+      fetchProfile(user.id),
+      fetchIsAdmin(user.id),
+    ]);
+
+    if (profile) {
+      setUser({ ...profile, role: isAdminRole ? 'admin' : 'user' });
+    }
   }, [user]);
 
   const updateUserRole = useCallback(async (userId: string, role: 'user' | 'admin') => {
