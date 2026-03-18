@@ -28,6 +28,7 @@ interface Props {
 
 export function ImportStatementModal({ open, onClose }: Props) {
   const { transactions, categories, accounts, addTransaction } = useFinance();
+  const { user } = useAuth();
 
   const [step, setStep] = useState<Step>('upload');
   const [fileName, setFileName] = useState('');
