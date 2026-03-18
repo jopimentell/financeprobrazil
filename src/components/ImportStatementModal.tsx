@@ -163,8 +163,14 @@ export function ImportStatementModal({ open, onClose }: Props) {
     return found?.id || cats[0]?.id || '';
   }, [expenseCategories, incomeCategories]);
 
-  const applyMapping = () => {
+  const applyMapping = async () => {
     if (!rawData || !mappingValidation.isValid) return;
+
+    // Fetch user's categorization rules
+    let userRules: Awaited<ReturnType<typeof fetchRules>> = [];
+    if (user?.id) {
+      try { userRules = await fetchRules(user.id); } catch { /* ignore */ }
+    }
 
     const dateIdx = mappings.findIndex(m => m.role === 'date');
     const amountIdx = mappings.findIndex(m => m.role === 'amount');
