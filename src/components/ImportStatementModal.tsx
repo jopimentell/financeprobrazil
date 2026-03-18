@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
+import { fetchRules, applyRulesToTransactions } from '@/services/categorizationService';
+import { useAuth } from '@/contexts/AuthContext';
 import { parseBRNumber } from '@/utils/parsers/numberUtils';
 import { parseDate, isValidDate } from '@/utils/parsers/dateUtils';
 import { parseRawFile, parseOFXToRaw, RawFileData } from '@/utils/rawFileParser';
@@ -26,6 +28,7 @@ interface Props {
 
 export function ImportStatementModal({ open, onClose }: Props) {
   const { transactions, categories, accounts, addTransaction } = useFinance();
+  const { user } = useAuth();
 
   const [step, setStep] = useState<Step>('upload');
   const [fileName, setFileName] = useState('');
@@ -160,8 +163,14 @@ export function ImportStatementModal({ open, onClose }: Props) {
     return found?.id || cats[0]?.id || '';
   }, [expenseCategories, incomeCategories]);
 
-  const applyMapping = () => {
+  const applyMapping = async () => {
     if (!rawData || !mappingValidation.isValid) return;
+
+    // Fetch user's categorization rules
+    let userRules: Awaited<ReturnType<typeof fetchRules>> = [];
+    if (user?.id) {
+      try { userRules = await fetchRules(user.id); } catch { /* ignore */ }
+    }
 
     const dateIdx = mappings.findIndex(m => m.role === 'date');
     const amountIdx = mappings.findIndex(m => m.role === 'amount');
@@ -226,8 +235,15 @@ export function ImportStatementModal({ open, onClose }: Props) {
       return;
     }
 
-    setRows(parsed);
+    // Apply categorization rules to auto-assign categories
+    const withRules = userRules.length > 0 ? applyRulesToTransactions(userRules, parsed) as typeof parsed : parsed;
+    const rulesApplied = withRules.filter((r, i) => r.categoryId !== parsed[i].categoryId).length;
+
+    setRows(withRules);
     setStep('review');
+    if (rulesApplied > 0) {
+      toast.success(`${rulesApplied} transações categorizadas automaticamente por regras.`);
+    }
   };
 
   // ── Review helpers ──
