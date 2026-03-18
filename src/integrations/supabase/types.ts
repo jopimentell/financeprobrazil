@@ -62,6 +62,33 @@ export type Database = {
         }
         Relationships: []
       }
+      categorization_rules: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          match_type: string
+          pattern: string
+          user_id: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          match_type?: string
+          pattern: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          match_type?: string
+          pattern?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_card_expenses: {
         Row: {
           amount: number
