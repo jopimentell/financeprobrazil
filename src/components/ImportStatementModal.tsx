@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory, learnType, learnCategory } from '@/utils/transactionIntelligence';
+import { fetchRules, applyRulesToTransactions } from '@/services/categorizationService';
+import { useAuth } from '@/contexts/AuthContext';
 import { parseBRNumber } from '@/utils/parsers/numberUtils';
 import { parseDate, isValidDate } from '@/utils/parsers/dateUtils';
 import { parseRawFile, parseOFXToRaw, RawFileData } from '@/utils/rawFileParser';
