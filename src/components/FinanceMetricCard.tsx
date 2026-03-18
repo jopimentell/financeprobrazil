@@ -8,9 +8,10 @@ interface FinanceMetricCardProps {
   isCurrency?: boolean;
   onClick?: () => void;
   trend?: number | null;
+  hideValue?: boolean;
 }
 
-export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', isCurrency = true, onClick, trend }: FinanceMetricCardProps) {
+export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', isCurrency = true, onClick, trend, hideValue }: FinanceMetricCardProps) {
   const colorClass = {
     income: 'finance-income',
     expense: 'finance-expense',
@@ -26,7 +27,13 @@ export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', 
   }[type];
 
   const TrendIcon = trend && trend > 0 ? TrendingUp : trend && trend < 0 ? TrendingDown : Minus;
-  const trendColor = trend && trend > 0 ? 'text-green-600' : trend && trend < 0 ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = trend && trend > 0 ? 'finance-income' : trend && trend < 0 ? 'finance-expense' : 'text-muted-foreground';
+
+  const displayValue = hideValue
+    ? '•••••'
+    : isCurrency
+      ? `${value < 0 ? '-' : ''}R$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      : String(value);
 
   return (
     <div
@@ -36,27 +43,19 @@ export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', 
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
     >
-      {/* Subtle gradient overlay */}
-      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-        style={{ background: `linear-gradient(135deg, hsl(var(--${type === 'income' ? 'finance-income' : type === 'expense' ? 'finance-expense' : type === 'info' ? 'finance-info' : 'muted'}) / 0.03), transparent)` }}
-      />
-
       <div className="relative flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
-        <div className="w-9 h-9 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110" style={bgStyle}>
-          <Icon className={`h-4 w-4 ${colorClass}`} />
+        <span className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider">{title}</span>
+        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110" style={bgStyle}>
+          <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${colorClass}`} />
         </div>
       </div>
 
-      <div className="relative flex items-end justify-between gap-2">
-        <span className={`text-xl md:text-2xl font-bold tracking-tight ${colorClass}`}>
-          {isCurrency
-            ? `${value < 0 ? '-' : ''}R$ ${Math.abs(value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
-            : value
-          }
+      <div className="relative flex items-end justify-between gap-2 mt-1">
+        <span className={`text-lg sm:text-xl md:text-2xl font-bold tracking-tight ${colorClass} truncate`}>
+          {displayValue}
         </span>
-        {trend !== undefined && trend !== null && (
-          <div className={`flex items-center gap-0.5 text-xs font-medium ${trendColor} pb-1`}>
+        {!hideValue && trend !== undefined && trend !== null && (
+          <div className={`flex items-center gap-0.5 text-[10px] sm:text-xs font-medium ${trendColor} pb-0.5 shrink-0`}>
             <TrendIcon className="h-3 w-3" />
             <span>{Math.abs(trend).toFixed(0)}%</span>
           </div>
