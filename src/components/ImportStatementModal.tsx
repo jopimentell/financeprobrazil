@@ -235,8 +235,15 @@ export function ImportStatementModal({ open, onClose }: Props) {
       return;
     }
 
-    setRows(parsed);
+    // Apply categorization rules to auto-assign categories
+    const withRules = userRules.length > 0 ? applyRulesToTransactions(userRules, parsed) as typeof parsed : parsed;
+    const rulesApplied = withRules.filter((r, i) => r.categoryId !== parsed[i].categoryId).length;
+
+    setRows(withRules);
     setStep('review');
+    if (rulesApplied > 0) {
+      toast.success(`${rulesApplied} transações categorizadas automaticamente por regras.`);
+    }
   };
 
   // ── Review helpers ──
