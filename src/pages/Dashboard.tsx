@@ -10,7 +10,7 @@ import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { EmptyState } from '@/components/EmptyState';
 import { DashboardSortableCard } from '@/components/DashboardSortableCard';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock, CreditCard as CreditCardIcon } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock, CreditCard as CreditCardIcon, Eye, EyeOff } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { computeInvoices } from '@/services/financeService';
 import {
@@ -49,7 +49,7 @@ export default function Dashboard() {
   const now = new Date();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getMonthTransactions, getYearTransactions, transactions: allUserTx, creditCards, creditCardExpenses, paidInvoices } = useFinance();
+  const { getMonthTransactions, getYearTransactions, transactions: allUserTx, creditCards, creditCardExpenses, paidInvoices, accounts } = useFinance();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [annualView, setAnnualView] = useState(false);
@@ -57,6 +57,7 @@ export default function Dashboard() {
   const [modalType, setModalType] = useState<'income' | 'expense'>('expense');
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [layout, setLayout] = useState<string[]>(DEFAULT_LAYOUT);
+  const [hideValues, setHideValues] = useState(false);
 
   useEffect(() => {
     if (user?.id) setLayout(loadLayout(user.id));
@@ -70,7 +71,6 @@ export default function Dashboard() {
   const monthTx = useMemo(() => getMonthTransactions(year, month), [getMonthTransactions, year, month]);
   const yearTx = useMemo(() => getYearTransactions(year), [getYearTransactions, year]);
 
-  // Previous month for trend calculation
   const prevMonthIdx = month === 0 ? 11 : month - 1;
   const prevYearIdx = month === 0 ? year - 1 : year;
   const prevMonthTx = useMemo(() => getMonthTransactions(prevYearIdx, prevMonthIdx), [getMonthTransactions, prevYearIdx, prevMonthIdx]);
@@ -85,6 +85,8 @@ export default function Dashboard() {
 
   const incomeTrend = !annualView && prevIncome > 0 ? ((income - prevIncome) / prevIncome) * 100 : null;
   const expenseTrend = !annualView && prevExpense > 0 ? ((expense - prevExpense) / prevExpense) * 100 : null;
+
+  const fmt = (v: number) => hideValues ? '•••••' : `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
   // Credit card invoice summary
   const ccSummary = useMemo(() => {
@@ -108,7 +110,6 @@ export default function Dashboard() {
 
   const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  // Future installment expenses (parcelas futuras)
   const futureInstallments = useMemo(() => {
     const now = new Date();
     const currentMonthKey = now.getFullYear() * 12 + now.getMonth();
@@ -122,7 +123,6 @@ export default function Dashboard() {
 
   const futureInstallmentTotal = futureInstallments.reduce((s, t) => s + t.amount, 0);
 
-  // Group future installments by month for preview
   const futureByMonth = useMemo(() => {
     const grouped: Record<string, { label: string; total: number; items: typeof futureInstallments }> = {};
     futureInstallments.forEach(tx => {
@@ -157,30 +157,36 @@ export default function Dashboard() {
 
   const isEmpty = currentTx.length === 0;
 
+  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+
   const renderSection = (sectionId: string) => {
     switch (sectionId) {
       case 'metrics':
         return (
           <DashboardSortableCard id="metrics" key="metrics" className="col-span-full">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <FinanceMetricCard
                 title={annualView ? 'Saldo Anual' : 'Saldo do Mês'}
-                value={balance} icon={DollarSign}
+                value={hideValues ? 0 : balance} icon={DollarSign}
                 type={balance >= 0 ? 'info' : 'expense'}
+                hideValue={hideValues}
               />
               <FinanceMetricCard
-                title="Receitas" value={income} icon={TrendingUp} type="income"
+                title="Receitas" value={hideValues ? 0 : income} icon={TrendingUp} type="income"
                 trend={incomeTrend}
                 onClick={() => navigate(annualView ? `/receitas?year=${year}` : `/receitas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+                hideValue={hideValues}
               />
               <FinanceMetricCard
-                title="Despesas" value={expense} icon={TrendingDown} type="expense"
+                title="Despesas" value={hideValues ? 0 : expense} icon={TrendingDown} type="expense"
                 trend={expenseTrend}
                 onClick={() => navigate(annualView ? `/despesas?year=${year}` : `/despesas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+                hideValue={hideValues}
               />
               <FinanceMetricCard
-                title="Resultado" value={balance} icon={Wallet}
-                type={balance >= 0 ? 'income' : 'expense'}
+                title="Patrimônio" value={hideValues ? 0 : totalBalance} icon={Wallet}
+                type={totalBalance >= 0 ? 'income' : 'expense'}
+                hideValue={hideValues}
               />
             </div>
           </DashboardSortableCard>
@@ -189,34 +195,36 @@ export default function Dashboard() {
         if (!ccSummary || annualView || (ccSummary.openTotal === 0 && ccSummary.closedTotal === 0 && ccSummary.overdueTotal === 0 && ccSummary.futureTotal === 0)) return null;
         return (
           <DashboardSortableCard id="credit-cards-summary" key="credit-cards-summary" className="col-span-full">
-            <div className="finance-card">
+            <div className="finance-card cursor-pointer" onClick={() => navigate('/cartoes')}>
               <div className="flex items-center gap-2 mb-4">
-                <CreditCardIcon className="h-5 w-5 text-muted-foreground" />
-                <h3 className="text-sm font-medium text-muted-foreground">Cartões de Crédito</h3>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--primary) / 0.1)' }}>
+                  <CreditCardIcon className="h-4 w-4 text-primary" />
+                </div>
+                <h3 className="text-sm font-semibold">Cartões de Crédito</h3>
               </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {ccSummary.openTotal > 0 && (
-                  <div className="border border-border rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground">Faturas Abertas</p>
-                    <p className="text-lg font-bold text-chart-4">R$ {ccSummary.openTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <div className="rounded-xl bg-accent/50 p-3">
+                    <p className="text-xs text-muted-foreground">Fatura Aberta</p>
+                    <p className="text-base font-bold mt-1">{fmt(ccSummary.openTotal)}</p>
                   </div>
                 )}
                 {ccSummary.closedTotal > 0 && (
-                  <div className="border border-border rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground">Aguardando Pagamento</p>
-                    <p className="text-lg font-bold text-accent-foreground">R$ {ccSummary.closedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <div className="rounded-xl bg-accent/50 p-3">
+                    <p className="text-xs text-muted-foreground">Aguardando</p>
+                    <p className="text-base font-bold mt-1">{fmt(ccSummary.closedTotal)}</p>
                   </div>
                 )}
                 {ccSummary.overdueTotal > 0 && (
-                  <div className="border border-destructive/50 rounded-lg p-3">
-                    <p className="text-xs text-destructive">Faturas Vencidas</p>
-                    <p className="text-lg font-bold text-destructive">R$ {ccSummary.overdueTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <div className="rounded-xl bg-destructive/10 p-3">
+                    <p className="text-xs text-destructive">Vencidas</p>
+                    <p className="text-base font-bold text-destructive mt-1">{fmt(ccSummary.overdueTotal)}</p>
                   </div>
                 )}
                 {ccSummary.futureTotal > 0 && (
-                  <div className="border border-border rounded-lg p-3">
-                    <p className="text-xs text-muted-foreground">Faturas Futuras</p>
-                    <p className="text-lg font-bold text-muted-foreground">R$ {ccSummary.futureTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  <div className="rounded-xl bg-accent/50 p-3">
+                    <p className="text-xs text-muted-foreground">Futuras</p>
+                    <p className="text-base font-bold text-muted-foreground mt-1">{fmt(ccSummary.futureTotal)}</p>
                   </div>
                 )}
               </div>
@@ -229,28 +237,31 @@ export default function Dashboard() {
           <DashboardSortableCard id="forecast-installments" key="forecast-installments" className="col-span-full">
             <div className="finance-card">
               <div className="flex items-center gap-2 mb-4">
-                <CalendarClock className="h-5 w-5 text-muted-foreground" />
-                <h3 className="text-sm font-medium text-muted-foreground">Despesas Previstas (Parcelas Futuras)</h3>
-                <span className="ml-auto text-lg font-bold text-destructive">
-                  R$ {futureInstallmentTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </span>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--finance-warning) / 0.1)' }}>
+                  <CalendarClock className="h-4 w-4" style={{ color: 'hsl(var(--finance-warning))' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-sm font-semibold">Parcelas Futuras</h3>
+                </div>
+                <span className="text-base font-bold finance-expense shrink-0">{fmt(futureInstallmentTotal)}</span>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {futureByMonth.map(group => (
-                  <div key={group.label} className="border border-border/50 rounded-lg p-3">
+                  <div key={group.label} className="rounded-xl bg-accent/50 p-3">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-sm font-medium">{group.label}</span>
-                      <span className="text-sm font-semibold text-destructive">
-                        R$ {group.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </span>
+                      <span className="text-sm font-semibold finance-expense">{fmt(group.total)}</span>
                     </div>
                     <div className="space-y-1">
-                      {group.items.map(tx => (
+                      {group.items.slice(0, 3).map(tx => (
                         <div key={tx.id} className="flex justify-between text-xs text-muted-foreground">
-                          <span>{tx.description}</span>
-                          <span>R$ {tx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="truncate mr-2">{tx.description}</span>
+                          <span className="shrink-0">{fmt(tx.amount)}</span>
                         </div>
                       ))}
+                      {group.items.length > 3 && (
+                        <p className="text-xs text-muted-foreground">+{group.items.length - 3} mais</p>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -273,17 +284,22 @@ export default function Dashboard() {
         return (
           <DashboardSortableCard id="pending" key="pending" className="col-span-full">
             <div className="finance-card">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Próximas Contas</h3>
-              <div className="space-y-2">
+              <h3 className="text-sm font-semibold mb-3">📋 Próximas Contas</h3>
+              <div className="space-y-1">
                 {pendingTx.slice(0, 5).map(t => (
-                  <div key={t.id} className="flex justify-between items-center py-2.5 border-b border-border/50 last:border-0">
-                    <div>
-                      <span className="font-medium text-sm">{t.description}</span>
-                      <span className="text-xs text-muted-foreground ml-2">{new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                  <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-medium text-sm truncate block">{t.description}</span>
+                      <span className="text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString('pt-BR')}</span>
                     </div>
-                    <span className="font-semibold text-sm finance-expense">R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <span className="font-semibold text-sm finance-expense shrink-0 ml-3">{fmt(t.amount)}</span>
                   </div>
                 ))}
+                {pendingTx.length > 5 && (
+                  <button onClick={() => navigate('/planejamento')} className="w-full text-center text-xs text-primary font-medium py-2 mt-1">
+                    Ver todas ({pendingTx.length})
+                  </button>
+                )}
               </div>
             </div>
           </DashboardSortableCard>
@@ -293,57 +309,27 @@ export default function Dashboard() {
         return (
           <DashboardSortableCard id="annual-table" key="annual-table" className="col-span-full">
             <div className="finance-card">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Resumo por Mês</h3>
-              {/* Mobile: Cards */}
-              <div className="md:hidden space-y-2">
+              <h3 className="text-sm font-semibold mb-3">Resumo por Mês</h3>
+              <div className="space-y-1">
                 {monthNames.map((name, i) => {
                   const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
                   const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
                   const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
                   if (inc === 0 && exp === 0) return null;
+                  const bal = inc - exp;
                   return (
-                    <div key={i} className="flex items-center justify-between py-2.5 border-b border-border/50 last:border-0">
+                    <div key={i} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
                       <span className="text-sm font-medium">{name}</span>
-                      <div className="flex gap-4 text-xs">
-                        <span className="finance-income">+R$ {inc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                        <span className="finance-expense">-R$ {exp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                        <span className={`font-semibold ${inc - exp >= 0 ? 'finance-income' : 'finance-expense'}`}>
-                          R$ {(inc - exp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      <div className="flex items-center gap-4 text-xs">
+                        <span className="finance-income hidden sm:inline">+{fmt(inc)}</span>
+                        <span className="finance-expense hidden sm:inline">-{fmt(exp)}</span>
+                        <span className={`font-semibold text-sm ${bal >= 0 ? 'finance-income' : 'finance-expense'}`}>
+                          {fmt(bal)}
                         </span>
                       </div>
                     </div>
                   );
                 })}
-              </div>
-              {/* Desktop: Table */}
-              <div className="hidden md:block">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 px-2">Mês</th>
-                      <th className="text-right py-2 px-2">Receitas</th>
-                      <th className="text-right py-2 px-2">Despesas</th>
-                      <th className="text-right py-2 px-2">Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthNames.map((name, i) => {
-                      const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
-                      const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-                      const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-                      return (
-                        <tr key={i} className="border-b border-border/50 hover:bg-accent/50 transition-colors">
-                          <td className="py-2.5 px-2">{name}</td>
-                          <td className="py-2.5 px-2 text-right finance-income">R$ {inc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td className="py-2.5 px-2 text-right finance-expense">R$ {exp.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                          <td className={`py-2.5 px-2 text-right font-semibold ${inc - exp >= 0 ? 'finance-income' : 'finance-expense'}`}>
-                            R$ {(inc - exp).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
               </div>
             </div>
           </DashboardSortableCard>
@@ -354,8 +340,13 @@ export default function Dashboard() {
         return (
           <DashboardSortableCard id="recent-transactions" key="recent-transactions" className="col-span-full">
             <div className="finance-card">
-              <h3 className="text-sm font-medium text-muted-foreground mb-3">Últimas Transações</h3>
-              <TransactionTable transactions={monthTx.slice(-10).reverse()} onEdit={(t) => { setEditTx(t); setModalOpen(true); }} />
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold">Últimas Transações</h3>
+                <button onClick={() => navigate('/transacoes')} className="text-xs text-primary font-medium">
+                  Ver todas
+                </button>
+              </div>
+              <TransactionTable transactions={monthTx.slice(-10).reverse()} onEdit={(t) => { setEditTx(t); setModalOpen(true); }} pageSize={5} />
             </div>
           </DashboardSortableCard>
         );
@@ -373,38 +364,47 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-xl font-bold">{greeting}{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Aqui está seu resumo financeiro</p>
+      {/* Greeting + Hide Values */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">{greeting}{user?.name ? `, ${user.name.split(' ')[0]}` : ''} 👋</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Aqui está seu resumo financeiro</p>
+        </div>
+        <button
+          onClick={() => setHideValues(!hideValues)}
+          className="p-2.5 rounded-xl hover:bg-accent transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+          aria-label={hideValues ? 'Mostrar valores' : 'Ocultar valores'}
+        >
+          {hideValues ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+        </button>
       </div>
 
-      {/* Header */}
+      {/* Period Navigator + Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {annualView ? (
           <MonthNavigator year={year} month={month} onPrev={() => setYear(y => y - 1)} onNext={() => setYear(y => y + 1)} mode="year" />
         ) : (
           <MonthNavigator year={year} month={month} onPrev={prevMonth} onNext={nextMonth} />
         )}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2">
           <button
             onClick={() => openModal('income')}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl btn-income text-sm font-medium active:scale-95 transition-transform shadow-sm"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl btn-income text-sm font-medium active:scale-95 transition-transform min-h-[44px]"
           >
-            <Plus className="h-4 w-4" /> Receita
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Receita</span>
           </button>
           <button
             onClick={() => openModal('expense')}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl btn-expense text-sm font-medium active:scale-95 transition-transform shadow-sm"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl btn-expense text-sm font-medium active:scale-95 transition-transform min-h-[44px]"
           >
-            <Plus className="h-4 w-4" /> Despesa
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Despesa</span>
           </button>
           <button
             onClick={() => setAnnualView(!annualView)}
-            className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 active:scale-95 transition-all shadow-sm"
+            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-accent text-accent-foreground text-sm font-medium hover:opacity-90 active:scale-95 transition-all min-h-[44px]"
           >
             <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">{annualView ? 'Visão Mensal' : 'Visão Anual'}</span>
+            <span className="hidden sm:inline">{annualView ? 'Mensal' : 'Anual'}</span>
           </button>
         </div>
       </div>
@@ -417,7 +417,7 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Dashboard Sections with Drag and Drop */}
+      {/* Dashboard Sections */}
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={layout} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-1 gap-4">
