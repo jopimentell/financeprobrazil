@@ -17,69 +17,30 @@ export type Database = {
       accounts: {
         Row: {
           balance: number
-          color: string | null
           created_at: string
-          icon: string | null
           id: string
-          initial_balance: number
-          is_active: boolean
           name: string
-          type: Database["public"]["Enums"]["account_type"]
+          type: string
           updated_at: string
           user_id: string
         }
         Insert: {
           balance?: number
-          color?: string | null
           created_at?: string
-          icon?: string | null
           id?: string
-          initial_balance?: number
-          is_active?: boolean
           name: string
-          type?: Database["public"]["Enums"]["account_type"]
+          type?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           balance?: number
-          color?: string | null
           created_at?: string
-          icon?: string | null
           id?: string
-          initial_balance?: number
-          is_active?: boolean
           name?: string
-          type?: Database["public"]["Enums"]["account_type"]
+          type?: string
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      admin_logs: {
-        Row: {
-          action: string
-          admin_id: string | null
-          created_at: string
-          id: string
-          metadata: Json | null
-          target_user_id: string | null
-        }
-        Insert: {
-          action: string
-          admin_id?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          target_user_id?: string | null
-        }
-        Update: {
-          action?: string
-          admin_id?: string | null
-          created_at?: string
-          id?: string
-          metadata?: Json | null
-          target_user_id?: string | null
         }
         Relationships: []
       }
@@ -87,120 +48,115 @@ export type Database = {
         Row: {
           color: string | null
           created_at: string
-          icon: string | null
           id: string
           name: string
-          parent_id: string | null
-          type: Database["public"]["Enums"]["category_type"]
+          type: string
           updated_at: string
           user_id: string
         }
         Insert: {
           color?: string | null
           created_at?: string
-          icon?: string | null
           id?: string
           name: string
-          parent_id?: string | null
-          type: Database["public"]["Enums"]["category_type"]
+          type: string
           updated_at?: string
           user_id: string
         }
         Update: {
           color?: string | null
           created_at?: string
-          icon?: string | null
           id?: string
           name?: string
-          parent_id?: string | null
-          type?: Database["public"]["Enums"]["category_type"]
+          type?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "categories_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
-      categorization_rules: {
+      credit_card_expenses: {
         Row: {
-          category_id: string | null
+          amount: number
+          card_id: string
+          category: string | null
           created_at: string
+          current_installment: number | null
+          description: string
           id: string
-          keyword: string
-          priority: number | null
+          installments: number | null
+          parent_expense_id: string | null
+          purchase_date: string
+          total_installments: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          category_id?: string | null
+          amount: number
+          card_id: string
+          category?: string | null
           created_at?: string
+          current_installment?: number | null
+          description: string
           id?: string
-          keyword: string
-          priority?: number | null
+          installments?: number | null
+          parent_expense_id?: string | null
+          purchase_date: string
+          total_installments?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          category_id?: string | null
+          amount?: number
+          card_id?: string
+          category?: string | null
           created_at?: string
+          current_installment?: number | null
+          description?: string
           id?: string
-          keyword?: string
-          priority?: number | null
+          installments?: number | null
+          parent_expense_id?: string | null
+          purchase_date?: string
+          total_installments?: number | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "categorization_rules_category_id_fkey"
-            columns: ["category_id"]
+            foreignKeyName: "credit_card_expenses_card_id_fkey"
+            columns: ["card_id"]
             isOneToOne: false
-            referencedRelation: "categories"
+            referencedRelation: "credit_cards"
             referencedColumns: ["id"]
           },
         ]
       }
       credit_cards: {
         Row: {
-          brand: string | null
           closing_day: number
-          color: string | null
           created_at: string
           due_day: number
           id: string
-          is_active: boolean
-          limit_amount: number
+          limit: number
           name: string
           updated_at: string
           user_id: string
         }
         Insert: {
-          brand?: string | null
           closing_day?: number
-          color?: string | null
           created_at?: string
           due_day?: number
           id?: string
-          is_active?: boolean
-          limit_amount?: number
+          limit?: number
           name: string
           updated_at?: string
           user_id: string
         }
         Update: {
-          brand?: string | null
           closing_day?: number
-          color?: string | null
           created_at?: string
           due_day?: number
           id?: string
-          is_active?: boolean
-          limit_amount?: number
+          limit?: number
           name?: string
           updated_at?: string
           user_id?: string
@@ -213,10 +169,9 @@ export type Database = {
           creditor: string
           due_date: string | null
           id: string
-          installments_paid: number | null
-          installments_total: number | null
+          installments: number | null
           interest_rate: number | null
-          notes: string | null
+          paid_installments: number | null
           remaining_amount: number
           total_amount: number
           updated_at: string
@@ -227,12 +182,11 @@ export type Database = {
           creditor: string
           due_date?: string | null
           id?: string
-          installments_paid?: number | null
-          installments_total?: number | null
+          installments?: number | null
           interest_rate?: number | null
-          notes?: string | null
-          remaining_amount: number
-          total_amount: number
+          paid_installments?: number | null
+          remaining_amount?: number
+          total_amount?: number
           updated_at?: string
           user_id: string
         }
@@ -241,12 +195,44 @@ export type Database = {
           creditor?: string
           due_date?: string | null
           id?: string
-          installments_paid?: number | null
-          installments_total?: number | null
+          installments?: number | null
           interest_rate?: number | null
-          notes?: string | null
+          paid_installments?: number | null
           remaining_amount?: number
           total_amount?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      forecast: {
+        Row: {
+          created_at: string
+          expected_expenses: number
+          expected_income: number
+          id: string
+          month: string
+          projected_balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expected_expenses?: number
+          expected_income?: number
+          id?: string
+          month: string
+          projected_balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expected_expenses?: number
+          expected_income?: number
+          id?: string
+          month?: string
+          projected_balance?: number
           updated_at?: string
           user_id?: string
         }
@@ -255,75 +241,142 @@ export type Database = {
       investments: {
         Row: {
           created_at: string
-          current_amount: number
+          current_value: number
           id: string
           invested_amount: number
           name: string
-          notes: string | null
+          profit: number
           type: string
           updated_at: string
           user_id: string
-          yield_rate: number | null
         }
         Insert: {
           created_at?: string
-          current_amount?: number
+          current_value?: number
           id?: string
           invested_amount?: number
           name: string
-          notes?: string | null
+          profit?: number
           type: string
           updated_at?: string
           user_id: string
-          yield_rate?: number | null
         }
         Update: {
           created_at?: string
-          current_amount?: number
+          current_value?: number
           id?: string
           invested_amount?: number
           name?: string
-          notes?: string | null
+          profit?: number
           type?: string
           updated_at?: string
           user_id?: string
-          yield_rate?: number | null
         }
         Relationships: []
+      }
+      paid_invoices: {
+        Row: {
+          amount: number
+          card_id: string
+          created_at: string
+          id: string
+          month: string
+          paid_at: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          card_id: string
+          created_at?: string
+          id?: string
+          month: string
+          paid_at?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string
+          created_at?: string
+          id?: string
+          month?: string
+          paid_at?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paid_invoices_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "credit_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_features: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          feature_key: string
+          id: string
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          feature_key: string
+          id?: string
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plan_limits: {
         Row: {
           created_at: string
-          has_ai: boolean
-          has_reports: boolean
           id: string
           max_accounts: number
           max_categories: number
-          max_credit_cards: number
+          max_goals: number
           max_transactions_per_month: number
           plan_id: string
           updated_at: string
         }
         Insert: {
           created_at?: string
-          has_ai?: boolean
-          has_reports?: boolean
           id?: string
           max_accounts?: number
           max_categories?: number
-          max_credit_cards?: number
+          max_goals?: number
           max_transactions_per_month?: number
           plan_id: string
           updated_at?: string
         }
         Update: {
           created_at?: string
-          has_ai?: boolean
-          has_reports?: boolean
           id?: string
           max_accounts?: number
           max_categories?: number
-          max_credit_cards?: number
+          max_goals?: number
           max_transactions_per_month?: number
           plan_id?: string
           updated_at?: string
@@ -332,82 +385,82 @@ export type Database = {
           {
             foreignKeyName: "plan_limits_plan_id_fkey"
             columns: ["plan_id"]
+            isOneToOne: true
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_settings: {
+        Row: {
+          created_at: string
+          default_plan_id: string | null
+          id: string
+          monetization_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_plan_id?: string | null
+          id?: string
+          monetization_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_plan_id?: string | null
+          id?: string
+          monetization_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_settings_default_plan_id_fkey"
+            columns: ["default_plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
             referencedColumns: ["id"]
           },
         ]
       }
-      planning: {
-        Row: {
-          actual_amount: number
-          category_id: string | null
-          created_at: string
-          id: string
-          month: number
-          planned_amount: number
-          updated_at: string
-          user_id: string
-          year: number
-        }
-        Insert: {
-          actual_amount?: number
-          category_id?: string | null
-          created_at?: string
-          id?: string
-          month: number
-          planned_amount?: number
-          updated_at?: string
-          user_id: string
-          year: number
-        }
-        Update: {
-          actual_amount?: number
-          category_id?: string | null
-          created_at?: string
-          id?: string
-          month?: number
-          planned_amount?: number
-          updated_at?: string
-          user_id?: string
-          year?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "planning_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       plans: {
         Row: {
+          badge: string | null
+          color: string | null
           created_at: string
           description: string | null
           id: string
           is_active: boolean
+          is_free: boolean
           name: string
-          price: number
+          price_monthly: number
+          price_yearly: number
           updated_at: string
         }
         Insert: {
+          badge?: string | null
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          is_free?: boolean
           name: string
-          price?: number
+          price_monthly?: number
+          price_yearly?: number
           updated_at?: string
         }
         Update: {
+          badge?: string | null
+          color?: string | null
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean
+          is_free?: boolean
           name?: string
-          price?: number
+          price_monthly?: number
+          price_yearly?: number
           updated_at?: string
         }
         Relationships: []
@@ -450,32 +503,35 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_cycle: string
           created_at: string
-          expires_at: string | null
+          end_date: string | null
           id: string
           plan_id: string
-          started_at: string
-          status: Database["public"]["Enums"]["subscription_status"]
+          start_date: string
+          status: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          billing_cycle?: string
           created_at?: string
-          expires_at?: string | null
+          end_date?: string | null
           id?: string
           plan_id: string
-          started_at?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
+          start_date?: string
+          status?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          billing_cycle?: string
           created_at?: string
-          expires_at?: string | null
+          end_date?: string | null
           id?: string
           plan_id?: string
-          started_at?: string
-          status?: Database["public"]["Enums"]["subscription_status"]
+          start_date?: string
+          status?: string
           updated_at?: string
           user_id?: string
         }
@@ -489,22 +545,57 @@ export type Database = {
           },
         ]
       }
+      system_logs: {
+        Row: {
+          action: string
+          details: string | null
+          entity: string | null
+          entity_id: string | null
+          id: string
+          timestamp: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          details?: string | null
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          timestamp?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          details?: string | null
+          entity?: string | null
+          entity_id?: string | null
+          id?: string
+          timestamp?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           account_id: string | null
           amount: number
           category_id: string | null
           created_at: string
-          credit_card_id: string | null
           date: string
           description: string
           id: string
-          installment_current: number | null
-          installment_group: string | null
-          installment_total: number | null
+          installments: number | null
           notes: string | null
-          status: Database["public"]["Enums"]["transaction_status"]
-          type: Database["public"]["Enums"]["transaction_type"]
+          origin: string | null
+          parcela_atual: number | null
+          parcelamento_id: string | null
+          recurrence: string | null
+          status: string
+          total_parcelas: number | null
+          type: string
           updated_at: string
           user_id: string
         }
@@ -513,16 +604,18 @@ export type Database = {
           amount: number
           category_id?: string | null
           created_at?: string
-          credit_card_id?: string | null
           date: string
           description: string
           id?: string
-          installment_current?: number | null
-          installment_group?: string | null
-          installment_total?: number | null
+          installments?: number | null
           notes?: string | null
-          status?: Database["public"]["Enums"]["transaction_status"]
-          type: Database["public"]["Enums"]["transaction_type"]
+          origin?: string | null
+          parcela_atual?: number | null
+          parcelamento_id?: string | null
+          recurrence?: string | null
+          status?: string
+          total_parcelas?: number | null
+          type: string
           updated_at?: string
           user_id: string
         }
@@ -531,42 +624,22 @@ export type Database = {
           amount?: number
           category_id?: string | null
           created_at?: string
-          credit_card_id?: string | null
           date?: string
           description?: string
           id?: string
-          installment_current?: number | null
-          installment_group?: string | null
-          installment_total?: number | null
+          installments?: number | null
           notes?: string | null
-          status?: Database["public"]["Enums"]["transaction_status"]
-          type?: Database["public"]["Enums"]["transaction_type"]
+          origin?: string | null
+          parcela_atual?: number | null
+          parcelamento_id?: string | null
+          recurrence?: string | null
+          status?: string
+          total_parcelas?: number | null
+          type?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "transactions_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transactions_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "transactions_credit_card_id_fkey"
-            columns: ["credit_card_id"]
-            isOneToOne: false
-            referencedRelation: "credit_cards"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
@@ -603,12 +676,7 @@ export type Database = {
       }
     }
     Enums: {
-      account_type: "checking" | "savings" | "cash" | "investment" | "other"
       app_role: "admin" | "user"
-      category_type: "income" | "expense"
-      subscription_status: "active" | "cancelled" | "expired" | "trial"
-      transaction_status: "pending" | "paid" | "overdue"
-      transaction_type: "income" | "expense" | "transfer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -736,12 +804,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      account_type: ["checking", "savings", "cash", "investment", "other"],
       app_role: ["admin", "user"],
-      category_type: ["income", "expense"],
-      subscription_status: ["active", "cancelled", "expired", "trial"],
-      transaction_status: ["pending", "paid", "overdue"],
-      transaction_type: ["income", "expense", "transfer"],
     },
   },
 } as const
