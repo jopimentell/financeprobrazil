@@ -3,6 +3,7 @@ import { useFinance } from '@/contexts/FinanceContext';
 import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { ImportStatementModal } from '@/components/ImportStatementModal';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { Transaction } from '@/types/finance';
 import { Plus, Filter, Upload, Send, ChevronDown, Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -10,7 +11,8 @@ import { detectTransactionType, suggestCategory } from '@/utils/transactionIntel
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function Transactions() {
-  const { transactions, categories, accounts, addTransaction } = useFinance();
+  const { transactions, categories, accounts, addTransaction, updateTransaction, deleteTransaction } = useFinance();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [filterType, setFilterType] = useState<string>('all');
@@ -211,9 +213,37 @@ export default function Transactions() {
 
       {/* Transaction List */}
       <div className="finance-card !p-3 md:!p-5">
-        <TransactionTable transactions={filtered} onEdit={(t) => { setEditTx(t); setModalOpen(true); }} />
+        <TransactionTable
+          transactions={filtered}
+          onEdit={(t) => { setEditTx(t); setModalOpen(true); }}
+          selectable
+          selectedIds={selectedIds}
+          onSelectionChange={setSelectedIds}
+        />
         <div className="mt-3 text-xs text-muted-foreground text-center">{filtered.length} transação(ões)</div>
       </div>
+
+      <BulkActionsBar
+        selectedIds={Array.from(selectedIds)}
+        totalFiltered={filtered.length}
+        categories={categories}
+        accounts={accounts}
+        onClear={() => setSelectedIds(new Set())}
+        onSelectAll={() => setSelectedIds(new Set(filtered.map((t) => t.id)))}
+        onApply={async (updates) => {
+          const txMap = new Map(transactions.map((t) => [t.id, t]));
+          await Promise.all(
+            Array.from(selectedIds).map((id) => {
+              const t = txMap.get(id);
+              return t ? updateTransaction({ ...t, ...updates }) : Promise.resolve();
+            }),
+          );
+        }}
+        onDelete={async () => {
+          await Promise.all(Array.from(selectedIds).map((id) => deleteTransaction(id)));
+          setSelectedIds(new Set());
+        }}
+      />
 
       <TransactionModal open={modalOpen} onClose={() => { setModalOpen(false); setEditTx(null); }} transaction={editTx} />
       <ImportStatementModal open={importOpen} onClose={() => setImportOpen(false)} />

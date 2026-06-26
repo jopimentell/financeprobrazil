@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { MonthNavigator } from '@/components/MonthNavigator';
+import { CategoryDetailModal } from '@/components/CategoryDetailModal';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronRight } from 'lucide-react';
 
 const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 export default function Reports() {
   const { transactions, getCategoryName, getCategoryColor } = useFinance();
   const [year, setYear] = useState(new Date().getFullYear());
+  const [drillCategoryId, setDrillCategoryId] = useState<string | null>(null);
 
   const yearTx = useMemo(() => transactions.filter(t => new Date(t.date).getFullYear() === year), [transactions, year]);
 
@@ -19,13 +21,13 @@ export default function Reports() {
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     yearTx.filter(t => t.type === 'expense').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
-    return Object.entries(map).map(([id, value]) => ({ name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
+    return Object.entries(map).map(([id, value]) => ({ id, name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
   }, [yearTx, getCategoryName, getCategoryColor]);
 
   const incomeByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     yearTx.filter(t => t.type === 'income').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
-    return Object.entries(map).map(([id, value]) => ({ name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
+    return Object.entries(map).map(([id, value]) => ({ id, name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
   }, [yearTx, getCategoryName, getCategoryColor]);
 
   const monthlyComparison = useMemo(() => {
@@ -128,7 +130,17 @@ export default function Reports() {
             <div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={expenseByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} innerRadius={40}>
+                  <Pie
+                    data={expenseByCategory}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={75}
+                    innerRadius={40}
+                    onClick={(e: any) => e?.id && setDrillCategoryId(e.id)}
+                    cursor="pointer"
+                  >
                     {expenseByCategory.map((e, i) => <Cell key={i} fill={e.color} />)}
                   </Pie>
                   <Tooltip formatter={(v: number) => fmt(v)} />
@@ -136,16 +148,24 @@ export default function Reports() {
               </ResponsiveContainer>
               {/* Category list */}
               <div className="space-y-1 mt-2">
-                {expenseByCategory.slice(0, 5).map((cat, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5">
+                {expenseByCategory.slice(0, 5).map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setDrillCategoryId(cat.id)}
+                    className="w-full flex items-center justify-between py-1.5 px-2 -mx-2 rounded-md hover:bg-accent/60 transition-colors group"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                       <span className="text-xs truncate">{cat.name}</span>
                     </div>
-                    <span className="text-xs font-medium shrink-0 ml-2">{fmt(cat.value)}</span>
-                  </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <span className="text-xs font-medium">{fmt(cat.value)}</span>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
                 ))}
               </div>
+              <p className="text-[10px] text-muted-foreground text-center mt-2">Toque em uma categoria para análise detalhada</p>
             </div>
           ) : <p className="text-muted-foreground text-center py-8 text-sm">Sem dados</p>}
         </div>
@@ -157,27 +177,52 @@ export default function Reports() {
             <div>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
-                  <Pie data={incomeByCategory} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={75} innerRadius={40}>
+                  <Pie
+                    data={incomeByCategory}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={75}
+                    innerRadius={40}
+                    onClick={(e: any) => e?.id && setDrillCategoryId(e.id)}
+                    cursor="pointer"
+                  >
                     {incomeByCategory.map((e, i) => <Cell key={i} fill={e.color} />)}
                   </Pie>
                   <Tooltip formatter={(v: number) => fmt(v)} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-1 mt-2">
-                {incomeByCategory.slice(0, 5).map((cat, i) => (
-                  <div key={i} className="flex items-center justify-between py-1.5">
+                {incomeByCategory.slice(0, 5).map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setDrillCategoryId(cat.id)}
+                    className="w-full flex items-center justify-between py-1.5 px-2 -mx-2 rounded-md hover:bg-accent/60 transition-colors group"
+                  >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />
                       <span className="text-xs truncate">{cat.name}</span>
                     </div>
-                    <span className="text-xs font-medium shrink-0 ml-2">{fmt(cat.value)}</span>
-                  </div>
+                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                      <span className="text-xs font-medium">{fmt(cat.value)}</span>
+                      <ChevronRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </button>
                 ))}
               </div>
             </div>
           ) : <p className="text-muted-foreground text-center py-8 text-sm">Sem dados</p>}
         </div>
       </div>
+
+      <CategoryDetailModal
+        open={!!drillCategoryId}
+        onClose={() => setDrillCategoryId(null)}
+        categoryId={drillCategoryId}
+        year={year}
+        transactions={yearTx}
+      />
     </div>
   );
 }
