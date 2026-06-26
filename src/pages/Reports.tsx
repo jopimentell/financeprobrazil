@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { MonthNavigator } from '@/components/MonthNavigator';
+import { CategoryDetailModal } from '@/components/CategoryDetailModal';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronRight } from 'lucide-react';
 
 const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 export default function Reports() {
   const { transactions, getCategoryName, getCategoryColor } = useFinance();
   const [year, setYear] = useState(new Date().getFullYear());
+  const [drillCategoryId, setDrillCategoryId] = useState<string | null>(null);
 
   const yearTx = useMemo(() => transactions.filter(t => new Date(t.date).getFullYear() === year), [transactions, year]);
 
@@ -19,13 +21,13 @@ export default function Reports() {
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     yearTx.filter(t => t.type === 'expense').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
-    return Object.entries(map).map(([id, value]) => ({ name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
+    return Object.entries(map).map(([id, value]) => ({ id, name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
   }, [yearTx, getCategoryName, getCategoryColor]);
 
   const incomeByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     yearTx.filter(t => t.type === 'income').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
-    return Object.entries(map).map(([id, value]) => ({ name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
+    return Object.entries(map).map(([id, value]) => ({ id, name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
   }, [yearTx, getCategoryName, getCategoryColor]);
 
   const monthlyComparison = useMemo(() => {
