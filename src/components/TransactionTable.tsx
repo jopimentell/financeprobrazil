@@ -93,6 +93,20 @@ export function TransactionTable({
     [updateTransaction],
   );
 
+  const handleConfirmConvert = () => {
+    if (!convertTx || !convertDest) return;
+    if (convertDest === convertTx.accountId) { toast.error('Destino deve ser diferente da origem'); return; }
+    updateTransaction({
+      ...convertTx,
+      type: 'transfer',
+      transferAccountId: convertDest,
+      categoryId: '',
+    });
+    toast.success('Convertido em transferência');
+    setConvertTx(null);
+    setConvertDest('');
+  };
+
   if (!transactions.length) {
     return <div className="text-center py-8 text-muted-foreground">Nenhuma transação encontrada</div>;
   }
