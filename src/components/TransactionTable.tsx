@@ -126,27 +126,31 @@ export function TransactionTable({
                 <CategoryPicker
                   categories={categories}
                   currentId={t.categoryId}
-                  type={t.type}
+                  type={t.type === 'transfer' ? undefined : t.type}
                   onSelect={(id) => handleQuickCategory(t, id)}
                 >
                   <button
                     onClick={(e) => e.stopPropagation()}
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
-                    style={{ backgroundColor: `${getCategoryColor(t.categoryId)}20` }}
-                    title="Alterar categoria"
+                    style={{ backgroundColor: t.type === 'transfer' ? '#64748b20' : `${getCategoryColor(t.categoryId)}20` }}
+                    title={t.type === 'transfer' ? 'Transferência' : 'Alterar categoria'}
                   >
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />
+                    {t.type === 'transfer'
+                      ? <ArrowLeftRight className="h-4 w-4 text-slate-500" />
+                      : <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />}
                   </button>
                 </CategoryPicker>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{t.description}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {getCategoryName(t.categoryId)} • {getAccountName(t.accountId)}
+                    {t.type === 'transfer'
+                      ? `${getAccountName(t.accountId)} → ${getAccountName(t.transferAccountId || '')}`
+                      : `${getCategoryName(t.categoryId)} • ${getAccountName(t.accountId)}`}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={`font-semibold text-sm ${t.type === 'income' ? 'finance-income' : 'finance-expense'}`}>
-                    {t.type === 'income' ? '+' : '-'}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <p className={`font-semibold text-sm ${t.type === 'income' ? 'finance-income' : t.type === 'expense' ? 'finance-expense' : 'text-slate-500'}`}>
+                    {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '↔ '}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
                     {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
