@@ -320,6 +320,11 @@ export function TransactionTable({
                               <Pencil className="h-4 w-4 mr-2" /> Editar
                             </DropdownMenuItem>
                           )}
+                          {t.type !== 'transfer' && (
+                            <DropdownMenuItem onClick={() => { setConvertTx(t); setConvertDest(''); }}>
+                              <ArrowLeftRight className="h-4 w-4 mr-2" /> Converter em transferência
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleDelete(t.id)} className="text-destructive focus:text-destructive">
                             <Trash2 className="h-4 w-4 mr-2" /> Excluir
                           </DropdownMenuItem>
