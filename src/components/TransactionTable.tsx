@@ -26,7 +26,9 @@ export function TransactionTable({
   selectedIds,
   onSelectionChange,
 }: TransactionTableProps) {
-  const { deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories } = useFinance();
+  const { deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories, accounts } = useFinance();
+  const [convertTx, setConvertTx] = useState<Transaction | null>(null);
+  const [convertDest, setConvertDest] = useState<string>('');
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
