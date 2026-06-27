@@ -20,6 +20,7 @@ function mapTransaction(row: any): Transaction {
     type: row.type,
     categoryId: row.category_id || '',
     accountId: row.account_id || '',
+    transferAccountId: row.transfer_account_id || undefined,
     date: row.date,
     status: row.status,
     recurrence: row.recurrence,
