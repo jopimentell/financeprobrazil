@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Transaction } from '@/types/finance';
 import { useFinance } from '@/contexts/FinanceContext';
-import { Check, Pencil, Trash2, Copy, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Check, Pencil, Trash2, Copy, ChevronLeft, ChevronRight, MoreHorizontal, ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -26,7 +26,9 @@ export function TransactionTable({
   selectedIds,
   onSelectionChange,
 }: TransactionTableProps) {
-  const { deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories } = useFinance();
+  const { deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories, accounts } = useFinance();
+  const [convertTx, setConvertTx] = useState<Transaction | null>(null);
+  const [convertDest, setConvertDest] = useState<string>('');
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
@@ -91,6 +93,20 @@ export function TransactionTable({
     [updateTransaction],
   );
 
+  const handleConfirmConvert = () => {
+    if (!convertTx || !convertDest) return;
+    if (convertDest === convertTx.accountId) { toast.error('Destino deve ser diferente da origem'); return; }
+    updateTransaction({
+      ...convertTx,
+      type: 'transfer',
+      transferAccountId: convertDest,
+      categoryId: '',
+    });
+    toast.success('Convertido em transferência');
+    setConvertTx(null);
+    setConvertDest('');
+  };
+
   if (!transactions.length) {
     return <div className="text-center py-8 text-muted-foreground">Nenhuma transação encontrada</div>;
   }
@@ -126,27 +142,31 @@ export function TransactionTable({
                 <CategoryPicker
                   categories={categories}
                   currentId={t.categoryId}
-                  type={t.type}
+                  type={t.type === 'transfer' ? undefined : t.type}
                   onSelect={(id) => handleQuickCategory(t, id)}
                 >
                   <button
                     onClick={(e) => e.stopPropagation()}
                     className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
-                    style={{ backgroundColor: `${getCategoryColor(t.categoryId)}20` }}
-                    title="Alterar categoria"
+                    style={{ backgroundColor: t.type === 'transfer' ? '#64748b20' : `${getCategoryColor(t.categoryId)}20` }}
+                    title={t.type === 'transfer' ? 'Transferência' : 'Alterar categoria'}
                   >
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />
+                    {t.type === 'transfer'
+                      ? <ArrowLeftRight className="h-4 w-4 text-slate-500" />
+                      : <div className="w-3 h-3 rounded-full" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />}
                   </button>
                 </CategoryPicker>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{t.description}</p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {getCategoryName(t.categoryId)} • {getAccountName(t.accountId)}
+                    {t.type === 'transfer'
+                      ? `${getAccountName(t.accountId)} → ${getAccountName(t.transferAccountId || '')}`
+                      : `${getCategoryName(t.categoryId)} • ${getAccountName(t.accountId)}`}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className={`font-semibold text-sm ${t.type === 'income' ? 'finance-income' : 'finance-expense'}`}>
-                    {t.type === 'income' ? '+' : '-'}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <p className={`font-semibold text-sm ${t.type === 'income' ? 'finance-income' : t.type === 'expense' ? 'finance-expense' : 'text-slate-500'}`}>
+                    {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '↔ '}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
                     {new Date(t.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
@@ -233,6 +253,7 @@ export function TransactionTable({
                   <td className="py-3 px-2 text-muted-foreground whitespace-nowrap">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
                   <td className="py-3 px-2 font-medium">
                     <div className="flex items-center gap-2 min-w-0">
+                      {t.type === 'transfer' && <ArrowLeftRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
                       <span className="truncate">{t.description}</span>
                       {t.origin && t.origin !== 'manual' && (
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
@@ -246,21 +267,31 @@ export function TransactionTable({
                     </div>
                   </td>
                   <td className="py-3 px-2">
-                    <CategoryPicker
-                      categories={categories}
-                      currentId={t.categoryId}
-                      type={t.type}
-                      onSelect={(id) => handleQuickCategory(t, id)}
-                    >
-                      <button className="inline-flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded-md hover:bg-accent transition-colors max-w-full">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />
-                        <span className="truncate">{getCategoryName(t.categoryId)}</span>
-                      </button>
-                    </CategoryPicker>
+                    {t.type === 'transfer' ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                        <ArrowLeftRight className="h-3 w-3" /> Transferência
+                      </span>
+                    ) : (
+                      <CategoryPicker
+                        categories={categories}
+                        currentId={t.categoryId}
+                        type={t.type}
+                        onSelect={(id) => handleQuickCategory(t, id)}
+                      >
+                        <button className="inline-flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded-md hover:bg-accent transition-colors max-w-full">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />
+                          <span className="truncate">{getCategoryName(t.categoryId)}</span>
+                        </button>
+                      </CategoryPicker>
+                    )}
                   </td>
-                  <td className="py-3 px-2 text-muted-foreground truncate">{getAccountName(t.accountId)}</td>
-                  <td className={`py-3 px-2 text-right font-semibold whitespace-nowrap ${t.type === 'income' ? 'finance-income' : 'finance-expense'}`}>
-                    {t.type === 'income' ? '+' : '-'}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <td className="py-3 px-2 text-muted-foreground truncate">
+                    {t.type === 'transfer'
+                      ? <span>{getAccountName(t.accountId)} <span className="opacity-50">→</span> {getAccountName(t.transferAccountId || '')}</span>
+                      : getAccountName(t.accountId)}
+                  </td>
+                  <td className={`py-3 px-2 text-right font-semibold whitespace-nowrap ${t.type === 'income' ? 'finance-income' : t.type === 'expense' ? 'finance-expense' : 'text-slate-500'}`}>
+                    {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '↔ '}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-3 px-2 text-center">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${t.status === 'paid' ? 'bg-finance-income/10 finance-income' : 'bg-finance-warning/10 finance-warning'}`}>
@@ -287,6 +318,11 @@ export function TransactionTable({
                           {onEdit && (
                             <DropdownMenuItem onClick={() => onEdit(t)}>
                               <Pencil className="h-4 w-4 mr-2" /> Editar
+                            </DropdownMenuItem>
+                          )}
+                          {t.type !== 'transfer' && (
+                            <DropdownMenuItem onClick={() => { setConvertTx(t); setConvertDest(''); }}>
+                              <ArrowLeftRight className="h-4 w-4 mr-2" /> Converter em transferência
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => handleDelete(t.id)} className="text-destructive focus:text-destructive">
@@ -318,6 +354,37 @@ export function TransactionTable({
           </div>
         </div>
       )}
+
+      {convertTx && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setConvertTx(null)}>
+          <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" />
+          <div className="relative bg-card rounded-2xl shadow-lg w-full max-w-md p-5 space-y-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
+            <div>
+              <h3 className="text-base font-bold flex items-center gap-2"><ArrowLeftRight className="h-4 w-4" /> Converter em transferência</h3>
+              <p className="text-xs text-muted-foreground mt-1">{convertTx.description} • R$ {convertTx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">Conta de destino</label>
+              <select value={convertDest} onChange={(e) => setConvertDest(e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm">
+                <option value="">Selecione</option>
+                {accounts.filter((a) => a.id !== convertTx.accountId).map((a) => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground mt-2">Origem: {getAccountName(convertTx.accountId)}</p>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={() => setConvertTx(null)} className="px-3 py-2 text-sm rounded-lg hover:bg-accent">Cancelar</button>
+              <button onClick={handleConfirmConvert} disabled={!convertDest}
+                className="px-3 py-2 text-sm rounded-lg bg-primary text-primary-foreground disabled:opacity-50">
+                Converter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

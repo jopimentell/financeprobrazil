@@ -595,6 +595,7 @@ export type Database = {
           recurrence: string | null
           status: string
           total_parcelas: number | null
+          transfer_account_id: string | null
           type: string
           updated_at: string
           user_id: string
@@ -615,6 +616,7 @@ export type Database = {
           recurrence?: string | null
           status?: string
           total_parcelas?: number | null
+          transfer_account_id?: string | null
           type: string
           updated_at?: string
           user_id: string
@@ -635,11 +637,20 @@ export type Database = {
           recurrence?: string | null
           status?: string
           total_parcelas?: number | null
+          transfer_account_id?: string | null
           type?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "transactions_transfer_account_id_fkey"
+            columns: ["transfer_account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

@@ -187,6 +187,7 @@ export default function Transactions() {
                 <option value="all">Todos os tipos</option>
                 <option value="income">Receitas</option>
                 <option value="expense">Despesas</option>
+                <option value="transfer">Transferências</option>
               </select>
               <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}
                 className="px-3 py-2.5 rounded-lg border border-input bg-background text-sm min-h-[44px]">

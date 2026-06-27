@@ -1,11 +1,15 @@
+export type TransactionType = 'income' | 'expense' | 'transfer';
+
 export interface Transaction {
   id: string;
   userId: string;
   description: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: TransactionType;
   categoryId: string;
   accountId: string;
+  /** Destination account for transfers (source is accountId) */
+  transferAccountId?: string;
   date: string;
   status: 'paid' | 'pending';
   recurrence: 'none' | 'monthly' | 'yearly';
