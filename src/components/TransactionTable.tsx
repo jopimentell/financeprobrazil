@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { Transaction } from '@/types/finance';
 import { useFinance } from '@/contexts/FinanceContext';
-import { Check, Pencil, Trash2, Copy, ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import { Check, Pencil, Trash2, Copy, ChevronLeft, ChevronRight, MoreHorizontal, ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -237,6 +237,7 @@ export function TransactionTable({
                   <td className="py-3 px-2 text-muted-foreground whitespace-nowrap">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
                   <td className="py-3 px-2 font-medium">
                     <div className="flex items-center gap-2 min-w-0">
+                      {t.type === 'transfer' && <ArrowLeftRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />}
                       <span className="truncate">{t.description}</span>
                       {t.origin && t.origin !== 'manual' && (
                         <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium shrink-0 ${
@@ -250,21 +251,31 @@ export function TransactionTable({
                     </div>
                   </td>
                   <td className="py-3 px-2">
-                    <CategoryPicker
-                      categories={categories}
-                      currentId={t.categoryId}
-                      type={t.type}
-                      onSelect={(id) => handleQuickCategory(t, id)}
-                    >
-                      <button className="inline-flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded-md hover:bg-accent transition-colors max-w-full">
-                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />
-                        <span className="truncate">{getCategoryName(t.categoryId)}</span>
-                      </button>
-                    </CategoryPicker>
+                    {t.type === 'transfer' ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+                        <ArrowLeftRight className="h-3 w-3" /> Transferência
+                      </span>
+                    ) : (
+                      <CategoryPicker
+                        categories={categories}
+                        currentId={t.categoryId}
+                        type={t.type}
+                        onSelect={(id) => handleQuickCategory(t, id)}
+                      >
+                        <button className="inline-flex items-center gap-1.5 px-2 py-1 -mx-2 -my-1 rounded-md hover:bg-accent transition-colors max-w-full">
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: getCategoryColor(t.categoryId) }} />
+                          <span className="truncate">{getCategoryName(t.categoryId)}</span>
+                        </button>
+                      </CategoryPicker>
+                    )}
                   </td>
-                  <td className="py-3 px-2 text-muted-foreground truncate">{getAccountName(t.accountId)}</td>
-                  <td className={`py-3 px-2 text-right font-semibold whitespace-nowrap ${t.type === 'income' ? 'finance-income' : 'finance-expense'}`}>
-                    {t.type === 'income' ? '+' : '-'}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <td className="py-3 px-2 text-muted-foreground truncate">
+                    {t.type === 'transfer'
+                      ? <span>{getAccountName(t.accountId)} <span className="opacity-50">→</span> {getAccountName(t.transferAccountId || '')}</span>
+                      : getAccountName(t.accountId)}
+                  </td>
+                  <td className={`py-3 px-2 text-right font-semibold whitespace-nowrap ${t.type === 'income' ? 'finance-income' : t.type === 'expense' ? 'finance-expense' : 'text-slate-500'}`}>
+                    {t.type === 'income' ? '+' : t.type === 'expense' ? '-' : '↔ '}R$ {t.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </td>
                   <td className="py-3 px-2 text-center">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${t.status === 'paid' ? 'bg-finance-income/10 finance-income' : 'bg-finance-warning/10 finance-warning'}`}>
