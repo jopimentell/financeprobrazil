@@ -135,6 +135,7 @@ export async function addTransaction(userId: string, t: Omit<Transaction, 'id' |
   const row = {
     id, user_id: userId, description: t.description, amount: t.amount,
     type: t.type, category_id: t.categoryId || null, account_id: t.accountId || null,
+    transfer_account_id: t.transferAccountId || null,
     date: t.date, status: t.status, recurrence: t.recurrence,
     installments: t.installments, notes: t.notes,
     parcelamento_id: t.parcelamentoId, origin: t.origin || 'manual',
@@ -148,6 +149,7 @@ export async function updateTransaction(userId: string, t: Transaction): Promise
   await supabase.from('transactions').update({
     description: t.description, amount: t.amount, type: t.type,
     category_id: t.categoryId || null, account_id: t.accountId || null,
+    transfer_account_id: t.transferAccountId || null,
     date: t.date, status: t.status, recurrence: t.recurrence,
     installments: t.installments, notes: t.notes,
     parcelamento_id: t.parcelamentoId, origin: t.origin,
