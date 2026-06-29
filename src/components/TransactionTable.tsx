@@ -309,7 +309,7 @@ export function TransactionTable({
                             </DropdownMenuItem>
                           )}
                           {t.type !== 'transfer' && (
-                            <DropdownMenuItem onClick={() => { setConvertTx(t); setConvertDest(''); }}>
+                            <DropdownMenuItem onClick={() => setConvertTx(t)}>
                               <ArrowLeftRight className="h-4 w-4 mr-2" /> Converter em transferência
                             </DropdownMenuItem>
                           )}
