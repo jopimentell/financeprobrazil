@@ -189,6 +189,11 @@ export function TransactionTable({
                           <Pencil className="h-4 w-4" /> Editar
                         </button>
                       )}
+                      {t.type !== 'transfer' && (
+                        <button onClick={() => setConvertTx(t)} className="flex items-center justify-center py-2 px-3 rounded-lg bg-accent text-xs font-medium min-h-[44px]" title="Converter em transferência">
+                          <ArrowLeftRight className="h-4 w-4" />
+                        </button>
+                      )}
                       <button onClick={() => handleDelete(t.id)} className="flex items-center justify-center gap-1 py-2 px-3 rounded-lg bg-destructive/10 text-xs font-medium text-destructive min-h-[44px]">
                         <Trash2 className="h-4 w-4" />
                       </button>
