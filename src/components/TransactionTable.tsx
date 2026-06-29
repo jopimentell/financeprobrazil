@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CategoryPicker } from '@/components/CategoryPicker';
+import { ConvertToTransferModal } from '@/components/ConvertToTransferModal';
 
 interface TransactionTableProps {
   transactions: Transaction[];
