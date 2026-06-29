@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CategoryPicker } from '@/components/CategoryPicker';
+import { ConvertToTransferModal } from '@/components/ConvertToTransferModal';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -26,9 +27,8 @@ export function TransactionTable({
   selectedIds,
   onSelectionChange,
 }: TransactionTableProps) {
-  const { deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories, accounts } = useFinance();
+  const { transactions: allTransactions, deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories, accounts } = useFinance();
   const [convertTx, setConvertTx] = useState<Transaction | null>(null);
-  const [convertDest, setConvertDest] = useState<string>('');
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const lastClickedIndex = useRef<number | null>(null);
@@ -93,19 +93,7 @@ export function TransactionTable({
     [updateTransaction],
   );
 
-  const handleConfirmConvert = () => {
-    if (!convertTx || !convertDest) return;
-    if (convertDest === convertTx.accountId) { toast.error('Destino deve ser diferente da origem'); return; }
-    updateTransaction({
-      ...convertTx,
-      type: 'transfer',
-      transferAccountId: convertDest,
-      categoryId: '',
-    });
-    toast.success('Convertido em transferência');
-    setConvertTx(null);
-    setConvertDest('');
-  };
+  // legacy state retained for compatibility; smart modal handles conversion now
 
   if (!transactions.length) {
     return <div className="text-center py-8 text-muted-foreground">Nenhuma transação encontrada</div>;
@@ -199,6 +187,11 @@ export function TransactionTable({
                       {onEdit && (
                         <button onClick={() => onEdit(t)} className="flex-1 flex items-center justify-center gap-1 py-2 rounded-lg bg-accent text-xs font-medium min-h-[44px]">
                           <Pencil className="h-4 w-4" /> Editar
+                        </button>
+                      )}
+                      {t.type !== 'transfer' && (
+                        <button onClick={() => setConvertTx(t)} className="flex items-center justify-center py-2 px-3 rounded-lg bg-accent text-xs font-medium min-h-[44px]" title="Converter em transferência">
+                          <ArrowLeftRight className="h-4 w-4" />
                         </button>
                       )}
                       <button onClick={() => handleDelete(t.id)} className="flex items-center justify-center gap-1 py-2 px-3 rounded-lg bg-destructive/10 text-xs font-medium text-destructive min-h-[44px]">
@@ -321,7 +314,7 @@ export function TransactionTable({
                             </DropdownMenuItem>
                           )}
                           {t.type !== 'transfer' && (
-                            <DropdownMenuItem onClick={() => { setConvertTx(t); setConvertDest(''); }}>
+                            <DropdownMenuItem onClick={() => setConvertTx(t)}>
                               <ArrowLeftRight className="h-4 w-4 mr-2" /> Converter em transferência
                             </DropdownMenuItem>
                           )}
@@ -355,35 +348,15 @@ export function TransactionTable({
         </div>
       )}
 
-      {convertTx && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setConvertTx(null)}>
-          <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" />
-          <div className="relative bg-card rounded-2xl shadow-lg w-full max-w-md p-5 space-y-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div>
-              <h3 className="text-base font-bold flex items-center gap-2"><ArrowLeftRight className="h-4 w-4" /> Converter em transferência</h3>
-              <p className="text-xs text-muted-foreground mt-1">{convertTx.description} • R$ {convertTx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Conta de destino</label>
-              <select value={convertDest} onChange={(e) => setConvertDest(e.target.value)}
-                className="w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                <option value="">Selecione</option>
-                {accounts.filter((a) => a.id !== convertTx.accountId).map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
-              <p className="text-[11px] text-muted-foreground mt-2">Origem: {getAccountName(convertTx.accountId)}</p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setConvertTx(null)} className="px-3 py-2 text-sm rounded-lg hover:bg-accent">Cancelar</button>
-              <button onClick={handleConfirmConvert} disabled={!convertDest}
-                className="px-3 py-2 text-sm rounded-lg bg-primary text-primary-foreground disabled:opacity-50">
-                Converter
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConvertToTransferModal
+        open={!!convertTx}
+        onClose={() => setConvertTx(null)}
+        transaction={convertTx}
+        accounts={accounts}
+        allTransactions={allTransactions}
+        getAccountName={getAccountName}
+        updateTransaction={updateTransaction}
+      />
     </div>
   );
 }
