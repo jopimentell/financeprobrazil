@@ -343,35 +343,15 @@ export function TransactionTable({
         </div>
       )}
 
-      {convertTx && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setConvertTx(null)}>
-          <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" />
-          <div className="relative bg-card rounded-2xl shadow-lg w-full max-w-md p-5 space-y-4 animate-fade-in" onClick={(e) => e.stopPropagation()}>
-            <div>
-              <h3 className="text-base font-bold flex items-center gap-2"><ArrowLeftRight className="h-4 w-4" /> Converter em transferência</h3>
-              <p className="text-xs text-muted-foreground mt-1">{convertTx.description} • R$ {convertTx.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Conta de destino</label>
-              <select value={convertDest} onChange={(e) => setConvertDest(e.target.value)}
-                className="w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm">
-                <option value="">Selecione</option>
-                {accounts.filter((a) => a.id !== convertTx.accountId).map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
-                ))}
-              </select>
-              <p className="text-[11px] text-muted-foreground mt-2">Origem: {getAccountName(convertTx.accountId)}</p>
-            </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <button onClick={() => setConvertTx(null)} className="px-3 py-2 text-sm rounded-lg hover:bg-accent">Cancelar</button>
-              <button onClick={handleConfirmConvert} disabled={!convertDest}
-                className="px-3 py-2 text-sm rounded-lg bg-primary text-primary-foreground disabled:opacity-50">
-                Converter
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConvertToTransferModal
+        open={!!convertTx}
+        onClose={() => setConvertTx(null)}
+        transaction={convertTx}
+        accounts={accounts}
+        allTransactions={allTransactions}
+        getAccountName={getAccountName}
+        updateTransaction={updateTransaction}
+      />
     </div>
   );
 }
