@@ -27,7 +27,7 @@ export function TransactionTable({
   selectedIds,
   onSelectionChange,
 }: TransactionTableProps) {
-  const { deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories, accounts } = useFinance();
+  const { transactions: allTransactions, deleteTransaction, updateTransaction, addTransaction, getCategoryName, getAccountName, getCategoryColor, categories, accounts } = useFinance();
   const [convertTx, setConvertTx] = useState<Transaction | null>(null);
   const [convertDest, setConvertDest] = useState<string>('');
   const [page, setPage] = useState(0);
