@@ -1,64 +1,188 @@
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
-import { MonthNavigator } from '@/components/MonthNavigator';
 import { CategoryDetailModal } from '@/components/CategoryDetailModal';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, ChevronRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronRight, ChevronLeft, Calendar as CalendarIcon } from 'lucide-react';
 
 const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+const monthLong = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+type PeriodMode = 'month' | 'year' | 'custom';
 
 export default function Reports() {
   const { transactions, getCategoryName, getCategoryColor } = useFinance();
-  const [year, setYear] = useState(new Date().getFullYear());
+  const now = new Date();
+  const [mode, setMode] = useState<PeriodMode>('month');
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const [customStart, setCustomStart] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
+  const [customEnd, setCustomEnd] = useState(now.toISOString().split('T')[0]);
   const [drillCategoryId, setDrillCategoryId] = useState<string | null>(null);
 
-  const yearTx = useMemo(() => transactions.filter(t => new Date(t.date).getFullYear() === year), [transactions, year]);
+  const { start, end, label } = useMemo(() => {
+    if (mode === 'month') {
+      const s = new Date(year, month, 1);
+      const e = new Date(year, month + 1, 0, 23, 59, 59);
+      return { start: s, end: e, label: `${monthLong[month]} ${year}` };
+    }
+    if (mode === 'year') {
+      const s = new Date(year, 0, 1);
+      const e = new Date(year, 11, 31, 23, 59, 59);
+      return { start: s, end: e, label: `${year}` };
+    }
+    const s = new Date(customStart);
+    const e = new Date(customEnd + 'T23:59:59');
+    return { start: s, end: e, label: `${s.toLocaleDateString('pt-BR')} → ${e.toLocaleDateString('pt-BR')}` };
+  }, [mode, year, month, customStart, customEnd]);
 
-  const totalIncome = yearTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const totalExpense = yearTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  const periodTx = useMemo(
+    () => transactions.filter((t) => {
+      const d = new Date(t.date);
+      return d >= start && d <= end;
+    }),
+    [transactions, start, end],
+  );
+
+  const totalIncome = periodTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalExpense = periodTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const totalBalance = totalIncome - totalExpense;
 
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    yearTx.filter(t => t.type === 'expense').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
+    periodTx.filter(t => t.type === 'expense').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
     return Object.entries(map).map(([id, value]) => ({ id, name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
-  }, [yearTx, getCategoryName, getCategoryColor]);
+  }, [periodTx, getCategoryName, getCategoryColor]);
 
   const incomeByCategory = useMemo(() => {
     const map: Record<string, number> = {};
-    yearTx.filter(t => t.type === 'income').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
+    periodTx.filter(t => t.type === 'income').forEach(t => { map[t.categoryId] = (map[t.categoryId] || 0) + t.amount; });
     return Object.entries(map).map(([id, value]) => ({ id, name: getCategoryName(id), value, color: getCategoryColor(id) })).sort((a, b) => b.value - a.value);
-  }, [yearTx, getCategoryName, getCategoryColor]);
+  }, [periodTx, getCategoryName, getCategoryColor]);
 
-  const monthlyComparison = useMemo(() => {
-    return monthNames.map((name, i) => {
-      const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
-      return {
-        name,
-        receitas: mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
-        despesas: mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
-      };
+  // For timeline charts — if month mode, show daily; else monthly
+  const timeline = useMemo(() => {
+    if (mode === 'month') {
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      return Array.from({ length: daysInMonth }, (_, i) => {
+        const day = i + 1;
+        const dTx = periodTx.filter(t => new Date(t.date).getDate() === day);
+        return {
+          name: String(day).padStart(2, '0'),
+          receitas: dTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
+          despesas: dTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
+        };
+      });
+    }
+    // year or custom: group by month
+    const months: Record<string, { receitas: number; despesas: number; sortKey: number }> = {};
+    periodTx.forEach(t => {
+      const d = new Date(t.date);
+      const key = `${monthNames[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
+      const sortKey = d.getFullYear() * 12 + d.getMonth();
+      if (!months[key]) months[key] = { receitas: 0, despesas: 0, sortKey };
+      if (t.type === 'income') months[key].receitas += t.amount;
+      else if (t.type === 'expense') months[key].despesas += t.amount;
     });
-  }, [yearTx]);
+    return Object.entries(months)
+      .sort((a, b) => a[1].sortKey - b[1].sortKey)
+      .map(([name, v]) => ({ name, receitas: v.receitas, despesas: v.despesas }));
+  }, [periodTx, mode, year, month]);
 
   const cashFlow = useMemo(() => {
     let acc = 0;
-    return monthNames.map((name, i) => {
-      const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
-      const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-      const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-      acc += inc - exp;
-      return { name, saldo: acc };
+    return timeline.map(p => {
+      acc += p.receitas - p.despesas;
+      return { name: p.name, saldo: acc };
     });
-  }, [yearTx]);
+  }, [timeline]);
 
   const fmt = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
+  const navigate = (dir: -1 | 1) => {
+    if (mode === 'month') {
+      const m = month + dir;
+      if (m < 0) { setMonth(11); setYear(y => y - 1); }
+      else if (m > 11) { setMonth(0); setYear(y => y + 1); }
+      else setMonth(m);
+    } else if (mode === 'year') {
+      setYear(y => y + dir);
+    }
+  };
+
+  const goCurrent = () => {
+    setYear(now.getFullYear());
+    setMonth(now.getMonth());
+  };
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-bold">Relatórios</h1>
-        <MonthNavigator year={year} month={0} onPrev={() => setYear(y => y - 1)} onNext={() => setYear(y => y + 1)} mode="year" />
+      </div>
+
+      {/* Period Selector */}
+      <div className="finance-card !p-3 space-y-3">
+        <div className="flex items-center gap-1 p-1 rounded-xl bg-accent/40 w-fit">
+          {([
+            { id: 'month', label: 'Mês' },
+            { id: 'year', label: 'Ano' },
+            { id: 'custom', label: 'Período' },
+          ] as { id: PeriodMode; label: string }[]).map(opt => (
+            <button
+              key={opt.id}
+              onClick={() => setMode(opt.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                mode === opt.id ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+
+        {mode !== 'custom' ? (
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-lg hover:bg-accent min-h-[40px] min-w-[40px] flex items-center justify-center"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="flex-1 text-center">
+              <p className="text-sm font-semibold capitalize">{label}</p>
+              <button onClick={goCurrent} className="text-[10px] text-primary hover:underline">
+                Ir para hoje
+              </button>
+            </div>
+            <button
+              onClick={() => navigate(1)}
+              className="p-2 rounded-lg hover:bg-accent min-h-[40px] min-w-[40px] flex items-center justify-center"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">De</label>
+              <input
+                type="date"
+                value={customStart}
+                onChange={(e) => setCustomStart(e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Até</label>
+              <input
+                type="date"
+                value={customEnd}
+                onChange={(e) => setCustomEnd(e.target.value)}
+                className="w-full mt-1 px-3 py-2 rounded-lg border border-input bg-background text-sm"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -93,34 +217,40 @@ export default function Reports() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Monthly Comparison */}
+        {/* Timeline */}
         <div className="finance-card">
-          <h3 className="text-sm font-semibold mb-4">Comparação Mensal</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={monthlyComparison}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={60} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
-              <Legend />
-              <Bar dataKey="receitas" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="despesas" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <h3 className="text-sm font-semibold mb-4">
+            {mode === 'month' ? 'Movimento Diário' : 'Comparação Mensal'}
+          </h3>
+          {timeline.length ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={timeline}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} width={60} />
+                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Legend />
+                <Bar dataKey="receitas" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="despesas" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <p className="text-muted-foreground text-center py-8 text-sm">Sem dados no período</p>}
         </div>
 
         {/* Cash Flow */}
         <div className="finance-card">
           <h3 className="text-sm font-semibold mb-4">Fluxo de Caixa Acumulado</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={cashFlow}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} width={60} />
-              <Tooltip formatter={(v: number) => fmt(v)} />
-              <Line type="monotone" dataKey="saldo" stroke="hsl(221, 83%, 53%)" strokeWidth={2} dot={{ r: 3 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {cashFlow.length ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={cashFlow}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(220, 13%, 91%)" />
+                <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                <YAxis tick={{ fontSize: 10 }} width={60} />
+                <Tooltip formatter={(v: number) => fmt(v)} />
+                <Line type="monotone" dataKey="saldo" stroke="hsl(221, 83%, 53%)" strokeWidth={2} dot={{ r: 2 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : <p className="text-muted-foreground text-center py-8 text-sm">Sem dados no período</p>}
         </div>
 
         {/* Expense by Category */}
@@ -146,7 +276,6 @@ export default function Reports() {
                   <Tooltip formatter={(v: number) => fmt(v)} />
                 </PieChart>
               </ResponsiveContainer>
-              {/* Category list */}
               <div className="space-y-1 mt-2">
                 {expenseByCategory.slice(0, 5).map((cat) => (
                   <button
@@ -221,7 +350,7 @@ export default function Reports() {
         onClose={() => setDrillCategoryId(null)}
         categoryId={drillCategoryId}
         year={year}
-        transactions={yearTx}
+        transactions={periodTx}
       />
     </div>
   );
