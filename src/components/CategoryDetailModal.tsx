@@ -30,7 +30,8 @@ export function CategoryDetailModal({ open, onClose, categoryId, year, transacti
   const { getCategoryName, getCategoryColor } = useFinance();
 
   const categoryTx = useMemo(
-    () => transactions.filter((t) => t.categoryId === categoryId),
+    // Transfers are neutral money movements — never include them in category analytics.
+    () => transactions.filter((t) => t.categoryId === categoryId && t.type !== 'transfer'),
     [transactions, categoryId],
   );
 
