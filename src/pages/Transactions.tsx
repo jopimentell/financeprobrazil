@@ -4,14 +4,23 @@ import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { ImportStatementModal } from '@/components/ImportStatementModal';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
+import { MonthNavigator } from '@/components/MonthNavigator';
 import { Transaction } from '@/types/finance';
-import { Plus, Filter, Upload, Send, ChevronDown, Search } from 'lucide-react';
+import { Plus, Filter, Upload, Send, ChevronDown, Search, CalendarRange } from 'lucide-react';
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory } from '@/utils/transactionIntelligence';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function Transactions() {
-  const { transactions, categories, accounts, addTransaction, updateTransaction, deleteTransaction } = useFinance();
+  const {
+    transactions, categories, accounts, merchants,
+    addTransaction, updateTransaction, deleteTransaction,
+    addMerchant, assignMerchantToTransactions,
+  } = useFinance();
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const [showAllPeriods, setShowAllPeriods] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [modalOpen, setModalOpen] = useState(false);
   const [editTx, setEditTx] = useState<Transaction | null>(null);
@@ -22,6 +31,9 @@ export default function Transactions() {
   const [search, setSearch] = useState('');
   const [importOpen, setImportOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   // Quick-add state
   const [quickDesc, setQuickDesc] = useState('');
@@ -73,13 +85,18 @@ export default function Transactions() {
 
   const filtered = useMemo(() => {
     return transactions
+      .filter(t => {
+        if (showAllPeriods) return true;
+        const d = new Date(t.date);
+        return d.getFullYear() === year && d.getMonth() === month;
+      })
       .filter(t => filterType === 'all' || t.type === filterType)
       .filter(t => filterCategory === 'all' || t.categoryId === filterCategory)
       .filter(t => filterStatus === 'all' || t.status === filterStatus)
       .filter(t => filterOrigin === 'all' || (t.origin || 'manual') === filterOrigin)
       .filter(t => !search || t.description.toLowerCase().includes(search.toLowerCase()))
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, filterType, filterCategory, filterStatus, filterOrigin, search]);
+  }, [transactions, showAllPeriods, year, month, filterType, filterCategory, filterStatus, filterOrigin, search]);
 
   // Summary
   const totalIncome = filtered.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -103,6 +120,22 @@ export default function Transactions() {
           </button>
         </div>
       </div>
+
+      {/* Period Navigation */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {!showAllPeriods && (
+          <MonthNavigator year={year} month={month} onPrev={prevMonth} onNext={nextMonth} />
+        )}
+        <button
+          onClick={() => setShowAllPeriods(v => !v)}
+          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-input bg-background text-xs font-medium hover:bg-accent transition-colors min-h-[44px]"
+          title={showAllPeriods ? 'Voltar ao mês atual' : 'Ver todos os períodos'}
+        >
+          <CalendarRange className="h-3.5 w-3.5" />
+          <span>{showAllPeriods ? 'Ver por mês' : 'Todos os períodos'}</span>
+        </button>
+      </div>
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-3">
@@ -229,6 +262,7 @@ export default function Transactions() {
         totalFiltered={filtered.length}
         categories={categories}
         accounts={accounts}
+        merchants={merchants}
         onClear={() => setSelectedIds(new Set())}
         onSelectAll={() => setSelectedIds(new Set(filtered.map((t) => t.id)))}
         onApply={async (updates) => {
@@ -244,7 +278,15 @@ export default function Transactions() {
           await Promise.all(Array.from(selectedIds).map((id) => deleteTransaction(id)));
           setSelectedIds(new Set());
         }}
+        onAssignMerchant={async (merchantId) => {
+          await assignMerchantToTransactions(Array.from(selectedIds), merchantId);
+        }}
+        onCreateMerchant={async (name) => {
+          const created = await addMerchant({ name });
+          return created ? { id: created.id } : null;
+        }}
       />
+
 
       <TransactionModal open={modalOpen} onClose={() => { setModalOpen(false); setEditTx(null); }} transaction={editTx} />
       <ImportStatementModal open={importOpen} onClose={() => setImportOpen(false)} />

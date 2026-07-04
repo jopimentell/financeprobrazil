@@ -13,6 +13,7 @@ import { DashboardSortableCard } from '@/components/DashboardSortableCard';
 import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock, CreditCard as CreditCardIcon, Eye, EyeOff } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { computeInvoices } from '@/services/financeService';
+import { computeTotalPatrimony } from '@/utils/balanceEngine';
 import {
   DndContext,
   closestCenter,
@@ -157,7 +158,7 @@ export default function Dashboard() {
 
   const isEmpty = currentTx.length === 0;
 
-  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+  const totalBalance = computeTotalPatrimony(accounts, allUserTx);
 
   const renderSection = (sectionId: string) => {
     switch (sectionId) {

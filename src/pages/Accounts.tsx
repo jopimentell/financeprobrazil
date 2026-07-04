@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { Account } from '@/types/finance';
 import { Plus, Pencil, Trash2, X, Building2, Wallet, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { computeAccountBalance } from '@/utils/balanceEngine';
 
 const typeIcons = { bank: Building2, wallet: Wallet, credit_card: CreditCard };
 const typeLabels = { bank: 'Banco', wallet: 'Carteira', credit_card: 'Cartão de Crédito' };
@@ -13,7 +14,7 @@ const typeBgColors = {
 };
 
 export default function Accounts() {
-  const { accounts, addAccount, updateAccount, deleteAccount } = useFinance();
+  const { accounts, transactions, addAccount, updateAccount, deleteAccount } = useFinance();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
   const [form, setForm] = useState({ name: '', type: 'bank' as Account['type'], balance: '' });
@@ -30,7 +31,12 @@ export default function Accounts() {
     setModalOpen(false);
   };
 
-  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+  const dynamicBalances = useMemo(() => {
+    const map = new Map<string, number>();
+    accounts.forEach(a => map.set(a.id, computeAccountBalance(a, transactions)));
+    return map;
+  }, [accounts, transactions]);
+  const totalBalance = Array.from(dynamicBalances.values()).reduce((s, v) => s + v, 0);
   const fmt = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
 
   return (
@@ -80,7 +86,14 @@ export default function Accounts() {
                   </button>
                 </div>
               </div>
-              <span className={`text-xl font-bold ${a.balance >= 0 ? 'finance-income' : 'finance-expense'}`}>{fmt(a.balance)}</span>
+              <div className="mt-1">
+                <span className={`text-xl font-bold ${(dynamicBalances.get(a.id) ?? a.balance) >= 0 ? 'finance-income' : 'finance-expense'}`}>
+                  {fmt(dynamicBalances.get(a.id) ?? a.balance)}
+                </span>
+                {Math.abs((dynamicBalances.get(a.id) ?? a.balance) - a.balance) > 0.005 && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5">Saldo inicial: {fmt(a.balance)}</p>
+                )}
+              </div>
             </div>
           );
         })}

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import * as financeService from '@/services/financeService';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ interface FinanceContextType {
   creditCards: CreditCard[];
   creditCardExpenses: CreditCardExpense[];
   paidInvoices: PaidInvoice[];
+  merchants: Merchant[];
   allTransactions: Transaction[];
   allCategories: Category[];
   allAccounts: Account[];
@@ -55,6 +56,10 @@ interface FinanceContextType {
   getUserInvestments: (userId: string) => Investment[];
   systemLogs: SystemLog[];
   addSystemLog: (log: Omit<SystemLog, 'id' | 'timestamp'>) => void;
+  addMerchant: (m: Omit<Merchant, 'id' | 'userId'>) => Promise<Merchant | null>;
+  updateMerchant: (m: Merchant) => void;
+  deleteMerchant: (id: string) => void;
+  assignMerchantToTransactions: (transactionIds: string[], merchantId: string | null) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
@@ -73,6 +78,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [creditCardExpenses, setCreditCardExpenses] = useState<CreditCardExpense[]>([]);
   const [paidInvoices, setPaidInvoices] = useState<PaidInvoice[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
 
   const loadedUserRef = useRef<string>('');
@@ -86,6 +92,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setTransactions([]); setCategories([]); setAccounts([]);
       setDebts([]); setInvestments([]); setForecast([]);
       setCreditCards([]); setCreditCardExpenses([]); setPaidInvoices([]);
+      setMerchants([]);
       financeService.getSystemLogs().then(logs => setSystemLogs(logs)).catch(() => {});
       return;
     }
@@ -103,6 +110,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         setCreditCards(data.creditCards);
         setCreditCardExpenses(data.creditCardExpenses);
         setPaidInvoices(data.paidInvoices);
+        setMerchants(data.merchants || []);
       } catch (err) {
         console.error('[finance] Failed to load user data:', err);
       }
@@ -338,10 +346,34 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, [currentUserId, categories, accounts]);
 
+  const addMerchantFn = useCallback(async (m: Omit<Merchant, 'id' | 'userId'>) => {
+    try {
+      const created = await financeService.addMerchant(currentUserId, m);
+      setMerchants(prev => [...prev, created]);
+      return created;
+    } catch (e) { console.error(e); return null; }
+  }, [currentUserId]);
+
+  const updateMerchantFn = useCallback((m: Merchant) => {
+    setMerchants(prev => prev.map(x => x.id === m.id ? m : x));
+    financeService.updateMerchant(currentUserId, m).catch(() => {});
+  }, [currentUserId]);
+
+  const deleteMerchantFn = useCallback((id: string) => {
+    setMerchants(prev => prev.filter(x => x.id !== id));
+    setTransactions(prev => prev.map(t => t.merchantId === id ? { ...t, merchantId: undefined } : t));
+    financeService.deleteMerchant(currentUserId, id).catch(() => {});
+  }, [currentUserId]);
+
+  const assignMerchantToTransactionsFn = useCallback(async (ids: string[], merchantId: string | null) => {
+    setTransactions(prev => prev.map(t => ids.includes(t.id) ? { ...t, merchantId: merchantId || undefined } : t));
+    await financeService.assignMerchantToTransactions(currentUserId, ids, merchantId).catch(() => {});
+  }, [currentUserId]);
+
   return (
     <FinanceContext.Provider value={{
       transactions, categories, accounts, debts, investments, forecast,
-      creditCards, creditCardExpenses, paidInvoices,
+      creditCards, creditCardExpenses, paidInvoices, merchants,
       allTransactions, allCategories, allAccounts, allDebts, allInvestments,
       addTransaction, updateTransaction, deleteTransaction,
       addCategory, updateCategory, deleteCategory,
@@ -360,6 +392,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       getCategoryName, getAccountName, getCategoryColor,
       getUserTransactions, getUserCategories, getUserAccounts, getUserDebts, getUserInvestments,
       systemLogs, addSystemLog: addSystemLogFn,
+      addMerchant: addMerchantFn,
+      updateMerchant: updateMerchantFn,
+      deleteMerchant: deleteMerchantFn,
+      assignMerchantToTransactions: assignMerchantToTransactionsFn,
     }}>
       {children}
     </FinanceContext.Provider>

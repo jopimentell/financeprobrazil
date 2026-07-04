@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Transaction, Category, Account } from '@/types/finance';
-import { Tag, Wallet, Calendar as CalendarIcon, TrendingUp, TrendingDown, Trash2, X, Search, Check } from 'lucide-react';
+import { Transaction, Category, Account, Merchant } from '@/types/finance';
+import { Tag, Wallet, Calendar as CalendarIcon, TrendingUp, TrendingDown, Trash2, X, Search, Check, Store, Plus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
@@ -19,10 +19,13 @@ interface BulkActionsBarProps {
   totalFiltered: number;
   categories: Category[];
   accounts: Account[];
+  merchants?: Merchant[];
   onClear: () => void;
   onSelectAll: () => void;
   onApply: (updates: Partial<Transaction>) => Promise<void> | void;
   onDelete: () => Promise<void> | void;
+  onAssignMerchant?: (merchantId: string | null) => Promise<void> | void;
+  onCreateMerchant?: (name: string) => Promise<{ id: string } | null>;
 }
 
 export function BulkActionsBar({
@@ -30,14 +33,18 @@ export function BulkActionsBar({
   totalFiltered,
   categories,
   accounts,
+  merchants = [],
   onClear,
   onSelectAll,
   onApply,
   onDelete,
+  onAssignMerchant,
+  onCreateMerchant,
 }: BulkActionsBarProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [catSearch, setCatSearch] = useState('');
   const [accSearch, setAccSearch] = useState('');
+  const [merSearch, setMerSearch] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [openPopover, setOpenPopover] = useState<string | null>(null);
 
@@ -48,6 +55,13 @@ export function BulkActionsBar({
   const filteredAccs = useMemo(
     () => accounts.filter((a) => a.name.toLowerCase().includes(accSearch.toLowerCase())),
     [accounts, accSearch],
+  );
+  const filteredMerchants = useMemo(
+    () => merchants.filter((m) => m.name.toLowerCase().includes(merSearch.toLowerCase())),
+    [merchants, merSearch],
+  );
+  const merchantExactMatch = filteredMerchants.some(
+    (m) => m.name.toLowerCase() === merSearch.trim().toLowerCase(),
   );
 
   const count = selectedIds.length;
@@ -152,6 +166,79 @@ export function BulkActionsBar({
                   </div>
                 </PopoverContent>
               </Popover>
+
+              {/* Change Establishment (Merchant) */}
+              {onAssignMerchant && (
+                <Popover open={openPopover === 'mer'} onOpenChange={(o) => setOpenPopover(o ? 'mer' : null)}>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg hover:bg-accent text-xs font-medium min-h-[40px]">
+                      <Store className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Estabelecimento</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-2" align="end">
+                    <div className="relative mb-2">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <input
+                        autoFocus
+                        value={merSearch}
+                        onChange={(e) => setMerSearch(e.target.value)}
+                        placeholder="Buscar ou criar..."
+                        className="w-full pl-7 pr-2 py-1.5 rounded-md border border-input bg-background text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                      />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto space-y-0.5">
+                      {filteredMerchants.map((m) => (
+                        <button
+                          key={m.id}
+                          onClick={async () => {
+                            await onAssignMerchant(m.id);
+                            toast.success(`Estabelecimento "${m.name}" aplicado a ${count}`);
+                            setOpenPopover(null);
+                            setMerSearch('');
+                          }}
+                          className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-accent text-left text-xs"
+                        >
+                          <Store className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="flex-1 truncate">{m.name}</span>
+                        </button>
+                      ))}
+                      {merSearch.trim() && !merchantExactMatch && onCreateMerchant && (
+                        <button
+                          onClick={async () => {
+                            const created = await onCreateMerchant(merSearch.trim());
+                            if (created) {
+                              await onAssignMerchant(created.id);
+                              toast.success(`"${merSearch.trim()}" criado e aplicado a ${count}`);
+                            }
+                            setOpenPopover(null);
+                            setMerSearch('');
+                          }}
+                          className="w-full flex items-center gap-2 px-2 py-2 rounded-md hover:bg-primary/10 text-left text-xs text-primary"
+                        >
+                          <Plus className="h-3 w-3 shrink-0" />
+                          <span className="truncate">Criar "{merSearch.trim()}"</span>
+                        </button>
+                      )}
+                      {!filteredMerchants.length && !merSearch.trim() && (
+                        <p className="text-xs text-muted-foreground text-center py-4">Nenhum estabelecimento</p>
+                      )}
+                      <button
+                        onClick={async () => {
+                          await onAssignMerchant(null);
+                          toast.success(`Estabelecimento removido de ${count}`);
+                          setOpenPopover(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-2 py-2 mt-1 rounded-md hover:bg-destructive/10 text-left text-xs text-destructive border-t border-border"
+                      >
+                        <X className="h-3 w-3 shrink-0" />
+                        <span>Remover estabelecimento</span>
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+
 
               {/* Change Date */}
               <Popover open={openPopover === 'date'} onOpenChange={(o) => setOpenPopover(o ? 'date' : null)}>

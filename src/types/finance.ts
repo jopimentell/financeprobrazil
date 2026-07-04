@@ -10,6 +10,8 @@ export interface Transaction {
   accountId: string;
   /** Destination account for transfers (source is accountId) */
   transferAccountId?: string;
+  /** Normalized establishment (merchant) link — original description stays untouched */
+  merchantId?: string;
   date: string;
   status: 'paid' | 'pending';
   recurrence: 'none' | 'monthly' | 'yearly';
@@ -23,6 +25,14 @@ export interface Transaction {
   parcelaAtual?: number;
   /** Total installments in the series */
   totalParcelas?: number;
+}
+
+export interface Merchant {
+  id: string;
+  userId: string;
+  name: string;
+  icon?: string;
+  defaultCategoryId?: string;
 }
 
 export interface Category {
