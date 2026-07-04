@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
-import { Transaction, Category, Account } from '@/types/finance';
-import { Tag, Wallet, Calendar as CalendarIcon, TrendingUp, TrendingDown, Trash2, X, Search, Check } from 'lucide-react';
+import { Transaction, Category, Account, Merchant } from '@/types/finance';
+import { Tag, Wallet, Calendar as CalendarIcon, TrendingUp, TrendingDown, Trash2, X, Search, Check, Store, Plus } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
@@ -19,10 +19,13 @@ interface BulkActionsBarProps {
   totalFiltered: number;
   categories: Category[];
   accounts: Account[];
+  merchants?: Merchant[];
   onClear: () => void;
   onSelectAll: () => void;
   onApply: (updates: Partial<Transaction>) => Promise<void> | void;
   onDelete: () => Promise<void> | void;
+  onAssignMerchant?: (merchantId: string | null) => Promise<void> | void;
+  onCreateMerchant?: (name: string) => Promise<{ id: string } | null>;
 }
 
 export function BulkActionsBar({
@@ -30,10 +33,13 @@ export function BulkActionsBar({
   totalFiltered,
   categories,
   accounts,
+  merchants = [],
   onClear,
   onSelectAll,
   onApply,
   onDelete,
+  onAssignMerchant,
+  onCreateMerchant,
 }: BulkActionsBarProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [catSearch, setCatSearch] = useState('');
