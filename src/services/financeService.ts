@@ -106,7 +106,7 @@ function mapSystemLog(row: any): SystemLog {
 // ── Fetch all user data ────────────────────────────────
 
 export async function fetchAllUserData(userId: string) {
-  const [txRes, catRes, accRes, debtRes, invRes, fcRes, ccRes, cceRes, piRes] = await Promise.all([
+  const [txRes, catRes, accRes, debtRes, invRes, fcRes, ccRes, cceRes, piRes, mRes] = await Promise.all([
     supabase.from('transactions').select('*').eq('user_id', userId),
     supabase.from('categories').select('*').eq('user_id', userId),
     supabase.from('accounts').select('*').eq('user_id', userId),
@@ -116,6 +116,7 @@ export async function fetchAllUserData(userId: string) {
     supabase.from('credit_cards').select('*').eq('user_id', userId),
     supabase.from('credit_card_expenses').select('*').eq('user_id', userId),
     supabase.from('paid_invoices').select('*').eq('user_id', userId),
+    supabase.from('merchants').select('*').eq('user_id', userId),
   ]);
 
   return {
@@ -131,7 +132,44 @@ export async function fetchAllUserData(userId: string) {
       cardId: r.card_id, month: r.month, paidAt: r.paid_at,
       amount: Number(r.amount), transactionId: r.transaction_id,
     } as PaidInvoice)),
+    merchants: (mRes.data || []).map(mapMerchant),
   };
+}
+
+// ── Merchants (Establishments) ─────────────────────────
+
+export async function addMerchant(userId: string, m: Omit<Merchant, 'id' | 'userId'>): Promise<Merchant> {
+  const id = uid();
+  await supabase.from('merchants').insert({
+    id, user_id: userId, name: m.name,
+    icon: m.icon || null,
+    default_category_id: m.defaultCategoryId || null,
+  });
+  return { ...m, id, userId };
+}
+
+export async function updateMerchant(userId: string, m: Merchant): Promise<void> {
+  await supabase.from('merchants').update({
+    name: m.name,
+    icon: m.icon || null,
+    default_category_id: m.defaultCategoryId || null,
+  }).eq('id', m.id).eq('user_id', userId);
+}
+
+export async function deleteMerchant(userId: string, id: string): Promise<void> {
+  await supabase.from('merchants').delete().eq('id', id).eq('user_id', userId);
+}
+
+export async function assignMerchantToTransactions(
+  userId: string,
+  transactionIds: string[],
+  merchantId: string | null,
+): Promise<void> {
+  if (!transactionIds.length) return;
+  await supabase.from('transactions')
+    .update({ merchant_id: merchantId })
+    .in('id', transactionIds)
+    .eq('user_id', userId);
 }
 
 // ── Transactions ───────────────────────────────────────
@@ -147,6 +185,7 @@ export async function addTransaction(userId: string, t: Omit<Transaction, 'id' |
     id, user_id: userId, description: t.description, amount: t.amount,
     type: t.type, category_id: t.categoryId || null, account_id: t.accountId || null,
     transfer_account_id: t.transferAccountId || null,
+    merchant_id: t.merchantId || null,
     date: t.date, status: t.status, recurrence: t.recurrence,
     installments: t.installments, notes: t.notes,
     parcelamento_id: t.parcelamentoId, origin: t.origin || 'manual',
@@ -161,6 +200,7 @@ export async function updateTransaction(userId: string, t: Transaction): Promise
     description: t.description, amount: t.amount, type: t.type,
     category_id: t.categoryId || null, account_id: t.accountId || null,
     transfer_account_id: t.transferAccountId || null,
+    merchant_id: t.merchantId || null,
     date: t.date, status: t.status, recurrence: t.recurrence,
     installments: t.installments, notes: t.notes,
     parcelamento_id: t.parcelamentoId, origin: t.origin,
