@@ -4,7 +4,7 @@
  * Read operations return from Supabase directly.
  */
 
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant } from '@/types/finance';
 import { supabase } from '@/integrations/supabase/client';
 
 const uid = () => crypto.randomUUID();
@@ -21,6 +21,7 @@ function mapTransaction(row: any): Transaction {
     categoryId: row.category_id || '',
     accountId: row.account_id || '',
     transferAccountId: row.transfer_account_id || undefined,
+    merchantId: row.merchant_id || undefined,
     date: row.date,
     status: row.status,
     recurrence: row.recurrence,
@@ -30,6 +31,16 @@ function mapTransaction(row: any): Transaction {
     origin: row.origin,
     parcelaAtual: row.parcela_atual,
     totalParcelas: row.total_parcelas,
+  };
+}
+
+function mapMerchant(row: any): Merchant {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    icon: row.icon || undefined,
+    defaultCategoryId: row.default_category_id || undefined,
   };
 }
 
