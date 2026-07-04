@@ -121,6 +121,22 @@ export default function Transactions() {
         </div>
       </div>
 
+      {/* Period Navigation */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {!showAllPeriods && (
+          <MonthNavigator year={year} month={month} onPrev={prevMonth} onNext={nextMonth} />
+        )}
+        <button
+          onClick={() => setShowAllPeriods(v => !v)}
+          className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-input bg-background text-xs font-medium hover:bg-accent transition-colors min-h-[44px]"
+          title={showAllPeriods ? 'Voltar ao mês atual' : 'Ver todos os períodos'}
+        >
+          <CalendarRange className="h-3.5 w-3.5" />
+          <span>{showAllPeriods ? 'Ver por mês' : 'Todos os períodos'}</span>
+        </button>
+      </div>
+
+
       {/* Summary Cards */}
       <div className="grid grid-cols-3 gap-3">
         <div className="finance-card !p-3 text-center">
