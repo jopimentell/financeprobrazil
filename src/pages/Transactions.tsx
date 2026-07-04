@@ -262,6 +262,7 @@ export default function Transactions() {
         totalFiltered={filtered.length}
         categories={categories}
         accounts={accounts}
+        merchants={merchants}
         onClear={() => setSelectedIds(new Set())}
         onSelectAll={() => setSelectedIds(new Set(filtered.map((t) => t.id)))}
         onApply={async (updates) => {
@@ -277,7 +278,15 @@ export default function Transactions() {
           await Promise.all(Array.from(selectedIds).map((id) => deleteTransaction(id)));
           setSelectedIds(new Set());
         }}
+        onAssignMerchant={async (merchantId) => {
+          await assignMerchantToTransactions(Array.from(selectedIds), merchantId);
+        }}
+        onCreateMerchant={async (name) => {
+          const created = await addMerchant({ name });
+          return created ? { id: created.id } : null;
+        }}
       />
+
 
       <TransactionModal open={modalOpen} onClose={() => { setModalOpen(false); setEditTx(null); }} transaction={editTx} />
       <ImportStatementModal open={importOpen} onClose={() => setImportOpen(false)} />
