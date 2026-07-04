@@ -44,6 +44,7 @@ export function BulkActionsBar({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [catSearch, setCatSearch] = useState('');
   const [accSearch, setAccSearch] = useState('');
+  const [merSearch, setMerSearch] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [openPopover, setOpenPopover] = useState<string | null>(null);
 
@@ -54,6 +55,13 @@ export function BulkActionsBar({
   const filteredAccs = useMemo(
     () => accounts.filter((a) => a.name.toLowerCase().includes(accSearch.toLowerCase())),
     [accounts, accSearch],
+  );
+  const filteredMerchants = useMemo(
+    () => merchants.filter((m) => m.name.toLowerCase().includes(merSearch.toLowerCase())),
+    [merchants, merSearch],
+  );
+  const merchantExactMatch = filteredMerchants.some(
+    (m) => m.name.toLowerCase() === merSearch.trim().toLowerCase(),
   );
 
   const count = selectedIds.length;
