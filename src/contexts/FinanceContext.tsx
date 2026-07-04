@@ -346,10 +346,34 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, [currentUserId, categories, accounts]);
 
+  const addMerchantFn = useCallback(async (m: Omit<Merchant, 'id' | 'userId'>) => {
+    try {
+      const created = await financeService.addMerchant(currentUserId, m);
+      setMerchants(prev => [...prev, created]);
+      return created;
+    } catch (e) { console.error(e); return null; }
+  }, [currentUserId]);
+
+  const updateMerchantFn = useCallback((m: Merchant) => {
+    setMerchants(prev => prev.map(x => x.id === m.id ? m : x));
+    financeService.updateMerchant(currentUserId, m).catch(() => {});
+  }, [currentUserId]);
+
+  const deleteMerchantFn = useCallback((id: string) => {
+    setMerchants(prev => prev.filter(x => x.id !== id));
+    setTransactions(prev => prev.map(t => t.merchantId === id ? { ...t, merchantId: undefined } : t));
+    financeService.deleteMerchant(currentUserId, id).catch(() => {});
+  }, [currentUserId]);
+
+  const assignMerchantToTransactionsFn = useCallback(async (ids: string[], merchantId: string | null) => {
+    setTransactions(prev => prev.map(t => ids.includes(t.id) ? { ...t, merchantId: merchantId || undefined } : t));
+    await financeService.assignMerchantToTransactions(currentUserId, ids, merchantId).catch(() => {});
+  }, [currentUserId]);
+
   return (
     <FinanceContext.Provider value={{
       transactions, categories, accounts, debts, investments, forecast,
-      creditCards, creditCardExpenses, paidInvoices,
+      creditCards, creditCardExpenses, paidInvoices, merchants,
       allTransactions, allCategories, allAccounts, allDebts, allInvestments,
       addTransaction, updateTransaction, deleteTransaction,
       addCategory, updateCategory, deleteCategory,
@@ -368,6 +392,10 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       getCategoryName, getAccountName, getCategoryColor,
       getUserTransactions, getUserCategories, getUserAccounts, getUserDebts, getUserInvestments,
       systemLogs, addSystemLog: addSystemLogFn,
+      addMerchant: addMerchantFn,
+      updateMerchant: updateMerchantFn,
+      deleteMerchant: deleteMerchantFn,
+      assignMerchantToTransactions: assignMerchantToTransactionsFn,
     }}>
       {children}
     </FinanceContext.Provider>
