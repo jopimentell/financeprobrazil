@@ -274,6 +274,44 @@ export type Database = {
         }
         Relationships: []
       }
+      merchants: {
+        Row: {
+          created_at: string
+          default_category_id: string | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_category_id?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_category_id?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchants_default_category_id_fkey"
+            columns: ["default_category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       paid_invoices: {
         Row: {
           amount: number
@@ -588,6 +626,7 @@ export type Database = {
           description: string
           id: string
           installments: number | null
+          merchant_id: string | null
           notes: string | null
           origin: string | null
           parcela_atual: number | null
@@ -609,6 +648,7 @@ export type Database = {
           description: string
           id?: string
           installments?: number | null
+          merchant_id?: string | null
           notes?: string | null
           origin?: string | null
           parcela_atual?: number | null
@@ -630,6 +670,7 @@ export type Database = {
           description?: string
           id?: string
           installments?: number | null
+          merchant_id?: string | null
           notes?: string | null
           origin?: string | null
           parcela_atual?: number | null
@@ -643,6 +684,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "transactions_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "transactions_transfer_account_id_fkey"
             columns: ["transfer_account_id"]
