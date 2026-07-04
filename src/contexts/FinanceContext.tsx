@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import * as financeService from '@/services/financeService';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ interface FinanceContextType {
   creditCards: CreditCard[];
   creditCardExpenses: CreditCardExpense[];
   paidInvoices: PaidInvoice[];
+  merchants: Merchant[];
   allTransactions: Transaction[];
   allCategories: Category[];
   allAccounts: Account[];
@@ -55,6 +56,10 @@ interface FinanceContextType {
   getUserInvestments: (userId: string) => Investment[];
   systemLogs: SystemLog[];
   addSystemLog: (log: Omit<SystemLog, 'id' | 'timestamp'>) => void;
+  addMerchant: (m: Omit<Merchant, 'id' | 'userId'>) => Promise<Merchant | null>;
+  updateMerchant: (m: Merchant) => void;
+  deleteMerchant: (id: string) => void;
+  assignMerchantToTransactions: (transactionIds: string[], merchantId: string | null) => Promise<void>;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
@@ -73,6 +78,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [creditCards, setCreditCards] = useState<CreditCard[]>([]);
   const [creditCardExpenses, setCreditCardExpenses] = useState<CreditCardExpense[]>([]);
   const [paidInvoices, setPaidInvoices] = useState<PaidInvoice[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
 
   const loadedUserRef = useRef<string>('');
@@ -86,6 +92,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setTransactions([]); setCategories([]); setAccounts([]);
       setDebts([]); setInvestments([]); setForecast([]);
       setCreditCards([]); setCreditCardExpenses([]); setPaidInvoices([]);
+      setMerchants([]);
       financeService.getSystemLogs().then(logs => setSystemLogs(logs)).catch(() => {});
       return;
     }
@@ -103,6 +110,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         setCreditCards(data.creditCards);
         setCreditCardExpenses(data.creditCardExpenses);
         setPaidInvoices(data.paidInvoices);
+        setMerchants(data.merchants || []);
       } catch (err) {
         console.error('[finance] Failed to load user data:', err);
       }
