@@ -128,9 +128,9 @@ export default function CashFlow() {
   ];
 
   const toneClass = (tone: 'income' | 'expense' | 'neutral') =>
-    tone === 'income' ? 'text-success' : tone === 'expense' ? 'text-destructive' : 'text-foreground';
+    tone === 'income' ? 'text-finance-income' : tone === 'expense' ? 'text-destructive' : 'text-foreground';
   const toneBg = (tone: 'income' | 'expense' | 'neutral') =>
-    tone === 'income' ? 'bg-success/10 text-success' : tone === 'expense' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground';
+    tone === 'income' ? 'bg-finance-income/10 text-finance-income' : tone === 'expense' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground';
 
   return (
     <div className="space-y-4 pb-24 md:pb-6">
@@ -263,7 +263,7 @@ export default function CashFlow() {
               tickFormatter={(v: number) => v.toLocaleString('pt-BR', { notation: 'compact' })} />
             <Tooltip formatter={(v: number) => brl(v)} />
             <Legend />
-            <Bar name="Receitas" dataKey="receitas" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+            <Bar name="Receitas" dataKey="receitas" fill="hsl(var(--finance-income))" radius={[4, 4, 0, 0]} />
             <Bar name="Despesas" dataKey="despesas" fill="hsl(var(--destructive))" radius={[4, 4, 0, 0]} />
             <Bar name="Lucro" dataKey="lucro" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -281,7 +281,7 @@ export default function CashFlow() {
               tickFormatter={(v: number) => v.toLocaleString('pt-BR', { notation: 'compact' })} />
             <Tooltip formatter={(v: number) => brl(v)} />
             <Legend />
-            <Line name="Receitas" type="monotone" dataKey="receitas" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+            <Line name="Receitas" type="monotone" dataKey="receitas" stroke="hsl(var(--finance-income))" strokeWidth={2} dot={false} />
             <Line name="Despesas" type="monotone" dataKey="despesas" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} />
           </LineChart>
         </ResponsiveContainer>
@@ -328,13 +328,13 @@ export default function CashFlow() {
                       <tr key={r.tx.id} className="border-b border-border/50 hover:bg-muted/30">
                         <td className="py-2 tabular-nums text-muted-foreground text-xs">{dateBR(r.tx.date)}</td>
                         <td className="py-2">
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${r.amountIn ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full ${r.amountIn ? 'bg-finance-income/10 text-finance-income' : 'bg-destructive/10 text-destructive'}`}>
                             {r.amountIn ? 'Receita' : 'Despesa'}
                           </span>
                         </td>
                         <td className="py-2 text-muted-foreground">{getCategoryName(r.tx.categoryId)}</td>
                         <td className="py-2 max-w-[280px] truncate">{r.tx.description}</td>
-                        <td className="py-2 text-right tabular-nums text-success">{r.amountIn ? brl(r.amountIn) : '—'}</td>
+                        <td className="py-2 text-right tabular-nums text-finance-income">{r.amountIn ? brl(r.amountIn) : '—'}</td>
                         <td className="py-2 text-right tabular-nums text-destructive">{r.amountOut ? brl(r.amountOut) : '—'}</td>
                         <td className={`py-2 text-right tabular-nums font-medium ${r.runningBalance < 0 ? 'text-destructive' : ''}`}>{brl(r.runningBalance)}</td>
                       </tr>
@@ -359,7 +359,7 @@ export default function CashFlow() {
               <div key={day.date} className="space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold capitalize">{dateBR(day.date)} · {weekday(day.date)}</span>
-                  <span className={`font-semibold tabular-nums ${day.net >= 0 ? 'text-success' : 'text-destructive'}`}>{brl(day.net)}</span>
+                  <span className={`font-semibold tabular-nums ${day.net >= 0 ? 'text-finance-income' : 'text-destructive'}`}>{brl(day.net)}</span>
                 </div>
                 {day.rows.map((r) => (
                   <div key={r.tx.id} className="rounded-xl border border-border p-3">
@@ -370,7 +370,7 @@ export default function CashFlow() {
                           {getCategoryName(r.tx.categoryId)} · {getAccountName(r.tx.accountId)}
                         </p>
                       </div>
-                      <p className={`text-sm font-bold tabular-nums shrink-0 ${r.amountIn ? 'text-success' : 'text-destructive'}`}>
+                      <p className={`text-sm font-bold tabular-nums shrink-0 ${r.amountIn ? 'text-finance-income' : 'text-destructive'}`}>
                         {r.amountIn ? `+${brl(r.amountIn)}` : `-${brl(r.amountOut)}`}
                       </p>
                     </div>
@@ -393,7 +393,7 @@ export default function CashFlow() {
       <div className="finance-card grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div>
           <p className="text-xs text-muted-foreground">Receitas do período</p>
-          <p className="text-base font-bold text-success tabular-nums">{brl(totals.income)}</p>
+          <p className="text-base font-bold text-finance-income tabular-nums">{brl(totals.income)}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Despesas do período</p>
@@ -401,7 +401,7 @@ export default function CashFlow() {
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Lucro líquido</p>
-          <p className={`text-base font-bold tabular-nums ${totals.profit >= 0 ? 'text-success' : 'text-destructive'}`}>{brl(totals.profit)}</p>
+          <p className={`text-base font-bold tabular-nums ${totals.profit >= 0 ? 'text-finance-income' : 'text-destructive'}`}>{brl(totals.profit)}</p>
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Saldo final</p>
