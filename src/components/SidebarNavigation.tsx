@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, ArrowLeftRight, CalendarDays, Tag, Wallet,
   CreditCard, TrendingUp, LineChart, FileBarChart, Target, Menu, X, ChevronLeft,
-  ArrowDownCircle, ArrowUpCircle, Crown, User, LogOut, Settings
+  ArrowDownCircle, ArrowUpCircle, Crown, User, LogOut, Settings, Activity
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
