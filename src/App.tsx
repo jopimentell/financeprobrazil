@@ -24,6 +24,7 @@ import Debts from "@/pages/Debts";
 import CreditCardsPage from "@/pages/CreditCards";
 import Investments from "@/pages/Investments";
 import ForecastPage from "@/pages/Forecast";
+import CashFlow from "@/pages/CashFlow";
 import Reports from "@/pages/Reports";
 import Calendar from "@/pages/Calendar";
 import Planning from "@/pages/Planning";
@@ -81,6 +82,7 @@ const App = () => (
                       <Route path="/cartoes" element={<ErrorBoundary><CreditCardsPage /></ErrorBoundary>} />
                       <Route path="/investimentos" element={<ErrorBoundary><Investments /></ErrorBoundary>} />
                       <Route path="/projecao" element={<ErrorBoundary><ForecastPage /></ErrorBoundary>} />
+                      <Route path="/fluxo-de-caixa" element={<ErrorBoundary><CashFlow /></ErrorBoundary>} />
                       <Route path="/relatorios" element={<ErrorBoundary><Reports /></ErrorBoundary>} />
                       <Route path="/plans" element={<ErrorBoundary><PlansPage /></ErrorBoundary>} />
                       <Route path="/account/subscription" element={<ErrorBoundary><SubscriptionPage /></ErrorBoundary>} />
