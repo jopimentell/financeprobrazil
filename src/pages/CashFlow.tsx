@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -318,8 +318,8 @@ export default function CashFlow() {
               </thead>
               <tbody>
                 {days.map((day) => (
-                  <>
-                    <tr key={`h-${day.date}`} className="bg-muted/50">
+                  <Fragment key={day.date}>
+                    <tr className="bg-muted/50">
                       <td colSpan={7} className="py-1.5 px-1 text-xs font-semibold capitalize">
                         {dateBR(day.date)} · {weekday(day.date)}
                       </td>
@@ -339,13 +339,13 @@ export default function CashFlow() {
                         <td className={`py-2 text-right tabular-nums font-medium ${r.runningBalance < 0 ? 'text-destructive' : ''}`}>{brl(r.runningBalance)}</td>
                       </tr>
                     ))}
-                    <tr key={`t-${day.date}`} className="text-xs text-muted-foreground">
+                    <tr className="text-xs text-muted-foreground">
                       <td colSpan={4} className="py-1.5 text-right pr-3">Resumo do dia</td>
                       <td className="py-1.5 text-right tabular-nums">{brl(day.income)}</td>
                       <td className="py-1.5 text-right tabular-nums">{brl(day.expense)}</td>
                       <td className="py-1.5 text-right tabular-nums font-semibold">{brl(day.endingBalance)}</td>
                     </tr>
-                  </>
+                  </Fragment>
                 ))}
               </tbody>
             </table>
