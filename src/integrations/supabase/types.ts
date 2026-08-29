@@ -74,6 +74,70 @@ export type Database = {
         }
         Relationships: []
       }
+      categorization_rules: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          id: string
+          match_type: string
+          merchant_id: string | null
+          nature: string | null
+          pattern: string
+          person_id: string | null
+          priority: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          match_type?: string
+          merchant_id?: string | null
+          nature?: string | null
+          pattern: string
+          person_id?: string | null
+          priority?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          match_type?: string
+          merchant_id?: string | null
+          nature?: string | null
+          pattern?: string
+          person_id?: string | null
+          priority?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categorization_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categorization_rules_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "categorization_rules_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_card_expenses: {
         Row: {
           amount: number
@@ -353,6 +417,33 @@ export type Database = {
           },
         ]
       }
+      people: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       plan_features: {
         Row: {
           created_at: string
@@ -627,11 +718,19 @@ export type Database = {
           id: string
           installments: number | null
           merchant_id: string | null
+          nature: string
+          nature_confirmed: boolean
+          nature_source: string
           notes: string | null
           origin: string | null
           parcela_atual: number | null
           parcelamento_id: string | null
+          parent_transaction_id: string | null
+          person_id: string | null
           recurrence: string | null
+          related_debt_id: string | null
+          related_transaction_id: string | null
+          reserve_goal: string | null
           status: string
           total_parcelas: number | null
           transfer_account_id: string | null
@@ -649,11 +748,19 @@ export type Database = {
           id?: string
           installments?: number | null
           merchant_id?: string | null
+          nature?: string
+          nature_confirmed?: boolean
+          nature_source?: string
           notes?: string | null
           origin?: string | null
           parcela_atual?: number | null
           parcelamento_id?: string | null
+          parent_transaction_id?: string | null
+          person_id?: string | null
           recurrence?: string | null
+          related_debt_id?: string | null
+          related_transaction_id?: string | null
+          reserve_goal?: string | null
           status?: string
           total_parcelas?: number | null
           transfer_account_id?: string | null
@@ -671,11 +778,19 @@ export type Database = {
           id?: string
           installments?: number | null
           merchant_id?: string | null
+          nature?: string
+          nature_confirmed?: boolean
+          nature_source?: string
           notes?: string | null
           origin?: string | null
           parcela_atual?: number | null
           parcelamento_id?: string | null
+          parent_transaction_id?: string | null
+          person_id?: string | null
           recurrence?: string | null
+          related_debt_id?: string | null
+          related_transaction_id?: string | null
+          reserve_goal?: string | null
           status?: string
           total_parcelas?: number | null
           transfer_account_id?: string | null
@@ -689,6 +804,34 @@ export type Database = {
             columns: ["merchant_id"]
             isOneToOne: false
             referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_parent_transaction_id_fkey"
+            columns: ["parent_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_related_debt_id_fkey"
+            columns: ["related_debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_related_transaction_id_fkey"
+            columns: ["related_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "transactions"
             referencedColumns: ["id"]
           },
           {
