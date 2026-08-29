@@ -1,5 +1,24 @@
 export type TransactionType = 'income' | 'expense' | 'transfer';
 
+/**
+ * Second classification layer — answers "what does this movement represent
+ * financially?" (independent from the category, which answers "where did the
+ * money go?").
+ */
+export type FinancialNature =
+  | 'own_income'        // receita própria (entra no resultado)
+  | 'own_expense'       // despesa própria (consumo real)
+  | 'transfer_in'       // recebimento de terceiro para repassar
+  | 'transfer_out'      // repasse a terceiro
+  | 'loan_received'     // empréstimo recebido
+  | 'loan_repaid'       // pagamento de empréstimo
+  | 'refund'            // reembolso recebido
+  | 'reserve'           // reserva / poupança / aporte
+  | 'internal_transfer' // transferência entre contas próprias
+  | 'unclassified';     // a identificar
+
+export type NatureSource = 'manual' | 'rule' | 'suggestion';
+
 export interface Transaction {
   id: string;
   userId: string;
@@ -12,6 +31,22 @@ export interface Transaction {
   transferAccountId?: string;
   /** Normalized establishment (merchant) link — original description stays untouched */
   merchantId?: string;
+  /** Financial nature — second classification layer */
+  nature?: FinancialNature;
+  /** Person related to the movement (repasse, empréstimo, reembolso) */
+  personId?: string;
+  /** Linked transaction (e.g. refund → original expense) */
+  relatedTransactionId?: string;
+  /** Parent transaction when this row came from splitting another one */
+  parentTransactionId?: string;
+  /** Debt linked to a loan movement */
+  relatedDebtId?: string;
+  /** Free-text goal for reserve movements */
+  reserveGoal?: string;
+  /** True when the user explicitly confirmed the nature */
+  natureConfirmed?: boolean;
+  /** Where the nature came from */
+  natureSource?: NatureSource;
   date: string;
   status: 'paid' | 'pending';
   recurrence: 'none' | 'monthly' | 'yearly';
@@ -27,6 +62,13 @@ export interface Transaction {
   totalParcelas?: number;
 }
 
+export interface Person {
+  id: string;
+  userId: string;
+  name: string;
+  notes?: string;
+}
+
 export interface Merchant {
   id: string;
   userId: string;
@@ -34,6 +76,7 @@ export interface Merchant {
   icon?: string;
   defaultCategoryId?: string;
 }
+
 
 export interface Category {
   id: string;
