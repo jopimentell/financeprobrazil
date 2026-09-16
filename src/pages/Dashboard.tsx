@@ -123,15 +123,14 @@ export default function Dashboard() {
     return { openTotal, closedTotal, overdueTotal, futureTotal };
   }, [creditCards, creditCardExpenses, paidInvoices]);
 
-  const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => a.date.localeCompare(b.date));
 
   const futureInstallments = useMemo(() => {
     const now = new Date();
     const currentMonthKey = now.getFullYear() * 12 + now.getMonth();
     return allUserTx.filter(tx => {
       if (tx.origin !== 'parcelamento') return false;
-      const txDate = new Date(tx.date);
-      const txMonthKey = txDate.getFullYear() * 12 + txDate.getMonth();
+      const txMonthKey = yearOf(tx.date) * 12 + monthOf(tx.date);
       return txMonthKey > currentMonthKey;
     });
   }, [allUserTx]);
@@ -139,18 +138,20 @@ export default function Dashboard() {
   const futureInstallmentTotal = futureInstallments.reduce((s, t) => s + t.amount, 0);
 
   const futureByMonth = useMemo(() => {
-    const grouped: Record<string, { label: string; total: number; items: typeof futureInstallments }> = {};
+    const grouped: Record<string, { label: string; total: number; items: typeof futureInstallments; sortKey: number }> = {};
     futureInstallments.forEach(tx => {
-      const d = new Date(tx.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const y = yearOf(tx.date);
+      const m = monthOf(tx.date);
+      const key = `${y}-${m}`;
       if (!grouped[key]) {
-        grouped[key] = { label: `${monthNames[d.getMonth()]} ${d.getFullYear()}`, total: 0, items: [] };
+        grouped[key] = { label: `${monthNames[m]} ${y}`, total: 0, items: [], sortKey: y * 12 + m };
       }
       grouped[key].total += tx.amount;
       grouped[key].items.push(tx);
     });
-    return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label)).slice(0, 6);
+    return Object.values(grouped).sort((a, b) => a.sortKey - b.sortKey).slice(0, 6);
   }, [futureInstallments]);
+
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
