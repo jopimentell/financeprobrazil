@@ -13,7 +13,9 @@ import { DashboardSortableCard } from '@/components/DashboardSortableCard';
 import { DollarSign, TrendingUp, TrendingDown, Wallet, Plus, BarChart3, CalendarClock, CreditCard as CreditCardIcon, Eye, EyeOff } from 'lucide-react';
 import { Transaction } from '@/types/finance';
 import { computeInvoices } from '@/services/financeService';
-import { computeTotalPatrimony } from '@/utils/balanceEngine';
+import { computeMonthSummary, computePeriodSummary, computeNetWorth, computeMonthlyBalanceSeries } from '@/utils/balanceEngine';
+import { yearBoundsISO, monthOf, yearOf, formatDateBR } from '@/utils/periodUtils';
+
 import {
   DndContext,
   closestCenter,
@@ -50,7 +52,7 @@ export default function Dashboard() {
   const now = new Date();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getMonthTransactions, getYearTransactions, transactions: allUserTx, creditCards, creditCardExpenses, paidInvoices, accounts } = useFinance();
+  const { getMonthTransactions, getYearTransactions, transactions: allUserTx, creditCards, creditCardExpenses, paidInvoices, accounts, investments, debts } = useFinance();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [annualView, setAnnualView] = useState(false);
@@ -74,20 +76,32 @@ export default function Dashboard() {
 
   const prevMonthIdx = month === 0 ? 11 : month - 1;
   const prevYearIdx = month === 0 ? year - 1 : year;
-  const prevMonthTx = useMemo(() => getMonthTransactions(prevYearIdx, prevMonthIdx), [getMonthTransactions, prevYearIdx, prevMonthIdx]);
 
   const currentTx = annualView ? yearTx : monthTx;
-  const income = currentTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const expense = currentTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const balance = income - expense;
 
-  const prevIncome = prevMonthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const prevExpense = prevMonthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  // FONTE ÚNICA DE VERDADE: saldo inicial, resultado e saldo final vêm do balanceEngine.
+  const summary = useMemo(() => {
+    if (annualView) {
+      const { from, to } = yearBoundsISO(year);
+      return computePeriodSummary(accounts, allUserTx, from, to);
+    }
+    return computeMonthSummary(accounts, allUserTx, year, month);
+  }, [annualView, accounts, allUserTx, year, month]);
 
-  const incomeTrend = !annualView && prevIncome > 0 ? ((income - prevIncome) / prevIncome) * 100 : null;
-  const expenseTrend = !annualView && prevExpense > 0 ? ((expense - prevExpense) / prevExpense) * 100 : null;
+  const prevSummary = useMemo(
+    () => computeMonthSummary(accounts, allUserTx, prevYearIdx, prevMonthIdx),
+    [accounts, allUserTx, prevYearIdx, prevMonthIdx],
+  );
+
+  const income = summary.income;
+  const expense = summary.expense;
+  const result = summary.result;
+
+  const incomeTrend = !annualView && prevSummary.income > 0 ? ((income - prevSummary.income) / prevSummary.income) * 100 : null;
+  const expenseTrend = !annualView && prevSummary.expense > 0 ? ((expense - prevSummary.expense) / prevSummary.expense) * 100 : null;
 
   const fmt = (v: number) => hideValues ? '•••••' : `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
 
   // Credit card invoice summary
   const ccSummary = useMemo(() => {
@@ -109,15 +123,14 @@ export default function Dashboard() {
     return { openTotal, closedTotal, overdueTotal, futureTotal };
   }, [creditCards, creditCardExpenses, paidInvoices]);
 
-  const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const pendingTx = monthTx.filter(t => t.status === 'pending').sort((a, b) => a.date.localeCompare(b.date));
 
   const futureInstallments = useMemo(() => {
     const now = new Date();
     const currentMonthKey = now.getFullYear() * 12 + now.getMonth();
     return allUserTx.filter(tx => {
       if (tx.origin !== 'parcelamento') return false;
-      const txDate = new Date(tx.date);
-      const txMonthKey = txDate.getFullYear() * 12 + txDate.getMonth();
+      const txMonthKey = yearOf(tx.date) * 12 + monthOf(tx.date);
       return txMonthKey > currentMonthKey;
     });
   }, [allUserTx]);
@@ -125,18 +138,20 @@ export default function Dashboard() {
   const futureInstallmentTotal = futureInstallments.reduce((s, t) => s + t.amount, 0);
 
   const futureByMonth = useMemo(() => {
-    const grouped: Record<string, { label: string; total: number; items: typeof futureInstallments }> = {};
+    const grouped: Record<string, { label: string; total: number; items: typeof futureInstallments; sortKey: number }> = {};
     futureInstallments.forEach(tx => {
-      const d = new Date(tx.date);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+      const y = yearOf(tx.date);
+      const m = monthOf(tx.date);
+      const key = `${y}-${m}`;
       if (!grouped[key]) {
-        grouped[key] = { label: `${monthNames[d.getMonth()]} ${d.getFullYear()}`, total: 0, items: [] };
+        grouped[key] = { label: `${monthNames[m]} ${y}`, total: 0, items: [], sortKey: y * 12 + m };
       }
       grouped[key].total += tx.amount;
       grouped[key].items.push(tx);
     });
-    return Object.values(grouped).sort((a, b) => a.label.localeCompare(b.label)).slice(0, 6);
+    return Object.values(grouped).sort((a, b) => a.sortKey - b.sortKey).slice(0, 6);
   }, [futureInstallments]);
+
 
   const prevMonth = () => { if (month === 0) { setMonth(11); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
@@ -158,41 +173,94 @@ export default function Dashboard() {
 
   const isEmpty = currentTx.length === 0;
 
-  const totalBalance = computeTotalPatrimony(accounts, allUserTx);
+  const monthlySeries = useMemo(
+    () => computeMonthlyBalanceSeries(accounts, allUserTx, year),
+    [accounts, allUserTx, year],
+  );
+
+  const netWorth = useMemo(() => computeNetWorth({
+
+    accounts,
+    transactions: allUserTx,
+    investments,
+    debts,
+    creditCards,
+    creditCardExpenses,
+    paidInvoices,
+  }), [accounts, allUserTx, investments, debts, creditCards, creditCardExpenses, paidInvoices]);
 
   const renderSection = (sectionId: string) => {
     switch (sectionId) {
       case 'metrics':
         return (
           <DashboardSortableCard id="metrics" key="metrics" className="col-span-full">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <FinanceMetricCard
-                title={annualView ? 'Saldo Anual' : 'Saldo do Mês'}
-                value={hideValues ? 0 : balance} icon={DollarSign}
-                type={balance >= 0 ? 'info' : 'expense'}
-                hideValue={hideValues}
-              />
-              <FinanceMetricCard
-                title="Receitas" value={hideValues ? 0 : income} icon={TrendingUp} type="income"
-                trend={incomeTrend}
-                onClick={() => navigate(annualView ? `/receitas?year=${year}` : `/receitas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
-                hideValue={hideValues}
-              />
-              <FinanceMetricCard
-                title="Despesas" value={hideValues ? 0 : expense} icon={TrendingDown} type="expense"
-                trend={expenseTrend}
-                onClick={() => navigate(annualView ? `/despesas?year=${year}` : `/despesas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
-                hideValue={hideValues}
-              />
-              <FinanceMetricCard
-                title="Patrimônio" value={hideValues ? 0 : totalBalance} icon={Wallet}
-                type={totalBalance >= 0 ? 'income' : 'expense'}
-                hideValue={hideValues}
-              />
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <FinanceMetricCard
+                  title="Receitas" value={hideValues ? 0 : income} icon={TrendingUp} type="income"
+                  trend={incomeTrend}
+                  onClick={() => navigate(annualView ? `/receitas?year=${year}` : `/receitas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+                  hideValue={hideValues}
+                />
+                <FinanceMetricCard
+                  title="Despesas" value={hideValues ? 0 : expense} icon={TrendingDown} type="expense"
+                  trend={expenseTrend}
+                  onClick={() => navigate(annualView ? `/despesas?year=${year}` : `/despesas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+                  hideValue={hideValues}
+                />
+                <FinanceMetricCard
+                  title={annualView ? 'Resultado do Ano' : 'Resultado do Mês'}
+                  value={hideValues ? 0 : result} icon={BarChart3}
+                  type={result >= 0 ? 'income' : 'expense'}
+                  hideValue={hideValues}
+                />
+                <FinanceMetricCard
+                  title="Saldo Final"
+                  value={hideValues ? 0 : summary.finalBalance} icon={DollarSign}
+                  type={summary.finalBalance >= 0 ? 'info' : 'expense'}
+                  subtitle={`Saldo inicial ${fmt(summary.openingBalance)}`}
+                  hideValue={hideValues}
+                />
+              </div>
+
+              <div className="finance-card !p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'hsl(var(--finance-income) / 0.1)' }}>
+                      <Wallet className="h-4 w-4 finance-income" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Patrimônio Líquido</p>
+                      <p className={`text-lg font-bold truncate ${netWorth.netWorth >= 0 ? 'finance-income' : 'finance-expense'}`}>
+                        {fmt(netWorth.netWorth)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Contas</p>
+                    <p className="text-sm font-semibold mt-0.5 truncate">{fmt(netWorth.cash)}</p>
+                  </div>
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Investimentos</p>
+                    <p className="text-sm font-semibold mt-0.5 truncate">{fmt(netWorth.investments)}</p>
+                  </div>
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Dívidas</p>
+                    <p className="text-sm font-semibold finance-expense mt-0.5 truncate">-{fmt(netWorth.debts)}</p>
+                  </div>
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Faturas abertas</p>
+                    <p className="text-sm font-semibold finance-expense mt-0.5 truncate">-{fmt(netWorth.cardLiabilities)}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </DashboardSortableCard>
         );
       case 'credit-cards-summary':
+
         if (!ccSummary || annualView || (ccSummary.openTotal === 0 && ccSummary.closedTotal === 0 && ccSummary.overdueTotal === 0 && ccSummary.futureTotal === 0)) return null;
         return (
           <DashboardSortableCard id="credit-cards-summary" key="credit-cards-summary" className="col-span-full">
@@ -291,7 +359,7 @@ export default function Dashboard() {
                   <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
                     <div className="min-w-0 flex-1">
                       <span className="font-medium text-sm truncate block">{t.description}</span>
-                      <span className="text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-xs text-muted-foreground">{formatDateBR(t.date)}</span>
                     </div>
                     <span className="font-semibold text-sm finance-expense shrink-0 ml-3">{fmt(t.amount)}</span>
                   </div>
@@ -310,29 +378,32 @@ export default function Dashboard() {
         return (
           <DashboardSortableCard id="annual-table" key="annual-table" className="col-span-full">
             <div className="finance-card">
-              <h3 className="text-sm font-semibold mb-3">Resumo por Mês</h3>
+              <h3 className="text-sm font-semibold mb-1">Resumo por Mês</h3>
+              <p className="text-[11px] text-muted-foreground mb-3">Saldo contínuo: o saldo final de cada mês é o saldo inicial do mês seguinte.</p>
               <div className="space-y-1">
-                {monthNames.map((name, i) => {
-                  const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
-                  const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-                  const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-                  if (inc === 0 && exp === 0) return null;
-                  const bal = inc - exp;
+                {monthlySeries.map((p) => {
+                  if (p.income === 0 && p.expense === 0 && p.openingBalance === 0) return null;
                   return (
-                    <div key={i} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
-                      <span className="text-sm font-medium">{name}</span>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="finance-income hidden sm:inline">+{fmt(inc)}</span>
-                        <span className="finance-expense hidden sm:inline">-{fmt(exp)}</span>
-                        <span className={`font-semibold text-sm ${bal >= 0 ? 'finance-income' : 'finance-expense'}`}>
-                          {fmt(bal)}
-                        </span>
+                    <div key={p.key} className="py-3 border-b border-border/50 last:border-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium">{monthNames[p.month]}</span>
+                        <div className="flex items-center gap-4 text-xs">
+                          <span className="finance-income hidden sm:inline">+{fmt(p.income)}</span>
+                          <span className="finance-expense hidden sm:inline">-{fmt(p.expense)}</span>
+                          <span className={`font-semibold text-sm ${p.finalBalance >= 0 ? 'finance-income' : 'finance-expense'}`}>
+                            {fmt(p.finalBalance)}
+                          </span>
+                        </div>
                       </div>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Inicial {fmt(p.openingBalance)} · Resultado {p.result >= 0 ? '+' : '-'}{fmt(Math.abs(p.result))} · Final {fmt(p.finalBalance)}
+                      </p>
                     </div>
                   );
                 })}
               </div>
             </div>
+
           </DashboardSortableCard>
         );
       case 'recent-transactions':

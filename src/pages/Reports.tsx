@@ -2,7 +2,9 @@ import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { CategoryDetailModal } from '@/components/CategoryDetailModal';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, ChevronRight, ChevronLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, ChevronRight, ChevronLeft, Scale } from 'lucide-react';
+import { computePeriodSummary } from '@/utils/balanceEngine';
+import { monthBoundsISO, yearBoundsISO, todayISO, monthOf, yearOf, dayOf, isInRange, formatDateBR } from '@/utils/periodUtils';
 
 const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const monthLong = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
@@ -10,42 +12,42 @@ const monthLong = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', '
 type PeriodMode = 'month' | 'year' | 'custom';
 
 export default function Reports() {
-  const { transactions, getCategoryName, getCategoryColor } = useFinance();
+  const { transactions, accounts, getCategoryName, getCategoryColor } = useFinance();
   const now = new Date();
   const [mode, setMode] = useState<PeriodMode>('month');
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const [customStart, setCustomStart] = useState(new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]);
-  const [customEnd, setCustomEnd] = useState(now.toISOString().split('T')[0]);
+  const [customStart, setCustomStart] = useState(monthBoundsISO(now.getFullYear(), now.getMonth()).from);
+  const [customEnd, setCustomEnd] = useState(todayISO());
   const [drillCategoryId, setDrillCategoryId] = useState<string | null>(null);
 
   const { start, end, label } = useMemo(() => {
     if (mode === 'month') {
-      const s = new Date(year, month, 1);
-      const e = new Date(year, month + 1, 0, 23, 59, 59);
-      return { start: s, end: e, label: `${monthLong[month]} ${year}` };
+      const b = monthBoundsISO(year, month);
+      return { start: b.from, end: b.to, label: `${monthLong[month]} ${year}` };
     }
     if (mode === 'year') {
-      const s = new Date(year, 0, 1);
-      const e = new Date(year, 11, 31, 23, 59, 59);
-      return { start: s, end: e, label: `${year}` };
+      const b = yearBoundsISO(year);
+      return { start: b.from, end: b.to, label: `${year}` };
     }
-    const s = new Date(customStart);
-    const e = new Date(customEnd + 'T23:59:59');
-    return { start: s, end: e, label: `${s.toLocaleDateString('pt-BR')} → ${e.toLocaleDateString('pt-BR')}` };
+    return { start: customStart, end: customEnd, label: `${formatDateBR(customStart)} → ${formatDateBR(customEnd)}` };
   }, [mode, year, month, customStart, customEnd]);
 
+  /** Somente movimentos realizados (pagos) compõem receitas, despesas e saldo. */
   const periodTx = useMemo(
-    () => transactions.filter((t) => {
-      const d = new Date(t.date);
-      return d >= start && d <= end;
-    }),
+    () => transactions.filter((t) => t.status === 'paid' && isInRange(t.date, start, end)),
     [transactions, start, end],
   );
 
-  const totalIncome = periodTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const totalExpense = periodTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const totalBalance = totalIncome - totalExpense;
+  // FONTE ÚNICA DE VERDADE
+  const summary = useMemo(
+    () => computePeriodSummary(accounts, transactions, start, end),
+    [accounts, transactions, start, end],
+  );
+
+  const totalIncome = summary.income;
+  const totalExpense = summary.expense;
+  const result = summary.result;
 
   const expenseByCategory = useMemo(() => {
     const map: Record<string, number> = {};
@@ -65,7 +67,7 @@ export default function Reports() {
       const daysInMonth = new Date(year, month + 1, 0).getDate();
       return Array.from({ length: daysInMonth }, (_, i) => {
         const day = i + 1;
-        const dTx = periodTx.filter(t => new Date(t.date).getDate() === day);
+        const dTx = periodTx.filter(t => dayOf(t.date) === day);
         return {
           name: String(day).padStart(2, '0'),
           receitas: dTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
@@ -76,9 +78,10 @@ export default function Reports() {
     // year or custom: group by month
     const months: Record<string, { receitas: number; despesas: number; sortKey: number }> = {};
     periodTx.forEach(t => {
-      const d = new Date(t.date);
-      const key = `${monthNames[d.getMonth()]}/${String(d.getFullYear()).slice(2)}`;
-      const sortKey = d.getFullYear() * 12 + d.getMonth();
+      const y = yearOf(t.date);
+      const m = monthOf(t.date);
+      const key = `${monthNames[m]}/${String(y).slice(2)}`;
+      const sortKey = y * 12 + m;
       if (!months[key]) months[key] = { receitas: 0, despesas: 0, sortKey };
       if (t.type === 'income') months[key].receitas += t.amount;
       else if (t.type === 'expense') months[key].despesas += t.amount;
@@ -88,15 +91,20 @@ export default function Reports() {
       .map(([name, v]) => ({ name, receitas: v.receitas, despesas: v.despesas }));
   }, [periodTx, mode, year, month]);
 
+  /**
+   * Fluxo de caixa acumulado: começa do SALDO INICIAL real do período
+   * (saldo final do período anterior), nunca de zero.
+   */
   const cashFlow = useMemo(() => {
-    let acc = 0;
+    let acc = summary.openingBalance;
     return timeline.map(p => {
       acc += p.receitas - p.despesas;
       return { name: p.name, saldo: acc };
     });
-  }, [timeline]);
+  }, [timeline, summary.openingBalance]);
 
   const fmt = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
 
   const navigate = (dir: -1 | 1) => {
     if (mode === 'month') {

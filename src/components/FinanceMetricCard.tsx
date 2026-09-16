@@ -9,9 +9,12 @@ interface FinanceMetricCardProps {
   onClick?: () => void;
   trend?: number | null;
   hideValue?: boolean;
+  /** Linha auxiliar (ex.: "Saldo inicial R$ 1.447,06") */
+  subtitle?: string;
 }
 
-export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', isCurrency = true, onClick, trend, hideValue }: FinanceMetricCardProps) {
+export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', isCurrency = true, onClick, trend, hideValue, subtitle }: FinanceMetricCardProps) {
+
   const colorClass = {
     income: 'finance-income',
     expense: 'finance-expense',
@@ -62,9 +65,14 @@ export function FinanceMetricCard({ title, value, icon: Icon, type = 'neutral', 
         )}
       </div>
 
+      {subtitle && (
+        <p className="relative text-[10px] sm:text-xs text-muted-foreground mt-1 truncate">{subtitle}</p>
+      )}
+
       {onClick && (
         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-current to-transparent opacity-0 group-hover:opacity-20 transition-opacity duration-300" />
       )}
+
     </div>
   );
 }
