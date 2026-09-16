@@ -76,20 +76,32 @@ export default function Dashboard() {
 
   const prevMonthIdx = month === 0 ? 11 : month - 1;
   const prevYearIdx = month === 0 ? year - 1 : year;
-  const prevMonthTx = useMemo(() => getMonthTransactions(prevYearIdx, prevMonthIdx), [getMonthTransactions, prevYearIdx, prevMonthIdx]);
 
   const currentTx = annualView ? yearTx : monthTx;
-  const income = currentTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const expense = currentTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  const balance = income - expense;
 
-  const prevIncome = prevMonthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-  const prevExpense = prevMonthTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+  // FONTE ÚNICA DE VERDADE: saldo inicial, resultado e saldo final vêm do balanceEngine.
+  const summary = useMemo(() => {
+    if (annualView) {
+      const { from, to } = yearBoundsISO(year);
+      return computePeriodSummary(accounts, allUserTx, from, to);
+    }
+    return computeMonthSummary(accounts, allUserTx, year, month);
+  }, [annualView, accounts, allUserTx, year, month]);
 
-  const incomeTrend = !annualView && prevIncome > 0 ? ((income - prevIncome) / prevIncome) * 100 : null;
-  const expenseTrend = !annualView && prevExpense > 0 ? ((expense - prevExpense) / prevExpense) * 100 : null;
+  const prevSummary = useMemo(
+    () => computeMonthSummary(accounts, allUserTx, prevYearIdx, prevMonthIdx),
+    [accounts, allUserTx, prevYearIdx, prevMonthIdx],
+  );
+
+  const income = summary.income;
+  const expense = summary.expense;
+  const result = summary.result;
+
+  const incomeTrend = !annualView && prevSummary.income > 0 ? ((income - prevSummary.income) / prevSummary.income) * 100 : null;
+  const expenseTrend = !annualView && prevSummary.expense > 0 ? ((expense - prevSummary.expense) / prevSummary.expense) * 100 : null;
 
   const fmt = (v: number) => hideValues ? '•••••' : `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
 
   // Credit card invoice summary
   const ccSummary = useMemo(() => {
