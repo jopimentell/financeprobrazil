@@ -353,7 +353,7 @@ export default function Dashboard() {
                   <div key={t.id} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
                     <div className="min-w-0 flex-1">
                       <span className="font-medium text-sm truncate block">{t.description}</span>
-                      <span className="text-xs text-muted-foreground">{new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-xs text-muted-foreground">{formatDateBR(t.date)}</span>
                     </div>
                     <span className="font-semibold text-sm finance-expense shrink-0 ml-3">{fmt(t.amount)}</span>
                   </div>
