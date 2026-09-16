@@ -372,29 +372,32 @@ export default function Dashboard() {
         return (
           <DashboardSortableCard id="annual-table" key="annual-table" className="col-span-full">
             <div className="finance-card">
-              <h3 className="text-sm font-semibold mb-3">Resumo por Mês</h3>
+              <h3 className="text-sm font-semibold mb-1">Resumo por Mês</h3>
+              <p className="text-[11px] text-muted-foreground mb-3">Saldo contínuo: o saldo final de cada mês é o saldo inicial do mês seguinte.</p>
               <div className="space-y-1">
-                {monthNames.map((name, i) => {
-                  const mTx = yearTx.filter(t => new Date(t.date).getMonth() === i);
-                  const inc = mTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-                  const exp = mTx.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-                  if (inc === 0 && exp === 0) return null;
-                  const bal = inc - exp;
+                {monthlySeries.map((p) => {
+                  if (p.income === 0 && p.expense === 0 && p.openingBalance === 0) return null;
                   return (
-                    <div key={i} className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
-                      <span className="text-sm font-medium">{name}</span>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="finance-income hidden sm:inline">+{fmt(inc)}</span>
-                        <span className="finance-expense hidden sm:inline">-{fmt(exp)}</span>
-                        <span className={`font-semibold text-sm ${bal >= 0 ? 'finance-income' : 'finance-expense'}`}>
-                          {fmt(bal)}
-                        </span>
+                    <div key={p.key} className="py-3 border-b border-border/50 last:border-0">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-medium">{monthNames[p.month]}</span>
+                        <div className="flex items-center gap-4 text-xs">
+                          <span className="finance-income hidden sm:inline">+{fmt(p.income)}</span>
+                          <span className="finance-expense hidden sm:inline">-{fmt(p.expense)}</span>
+                          <span className={`font-semibold text-sm ${p.finalBalance >= 0 ? 'finance-income' : 'finance-expense'}`}>
+                            {fmt(p.finalBalance)}
+                          </span>
+                        </div>
                       </div>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Inicial {fmt(p.openingBalance)} · Resultado {p.result >= 0 ? '+' : '-'}{fmt(Math.abs(p.result))} · Final {fmt(p.finalBalance)}
+                      </p>
                     </div>
                   );
                 })}
               </div>
             </div>
+
           </DashboardSortableCard>
         );
       case 'recent-transactions':
