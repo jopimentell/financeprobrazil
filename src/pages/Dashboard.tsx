@@ -173,7 +173,13 @@ export default function Dashboard() {
 
   const isEmpty = currentTx.length === 0;
 
+  const monthlySeries = useMemo(
+    () => computeMonthlyBalanceSeries(accounts, allUserTx, year),
+    [accounts, allUserTx, year],
+  );
+
   const netWorth = useMemo(() => computeNetWorth({
+
     accounts,
     transactions: allUserTx,
     investments,
