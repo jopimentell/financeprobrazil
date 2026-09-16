@@ -173,41 +173,88 @@ export default function Dashboard() {
 
   const isEmpty = currentTx.length === 0;
 
-  const totalBalance = computeTotalPatrimony(accounts, allUserTx);
+  const netWorth = useMemo(() => computeNetWorth({
+    accounts,
+    transactions: allUserTx,
+    investments,
+    debts,
+    creditCards,
+    creditCardExpenses,
+    paidInvoices,
+  }), [accounts, allUserTx, investments, debts, creditCards, creditCardExpenses, paidInvoices]);
 
   const renderSection = (sectionId: string) => {
     switch (sectionId) {
       case 'metrics':
         return (
           <DashboardSortableCard id="metrics" key="metrics" className="col-span-full">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <FinanceMetricCard
-                title={annualView ? 'Saldo Anual' : 'Saldo do Mês'}
-                value={hideValues ? 0 : balance} icon={DollarSign}
-                type={balance >= 0 ? 'info' : 'expense'}
-                hideValue={hideValues}
-              />
-              <FinanceMetricCard
-                title="Receitas" value={hideValues ? 0 : income} icon={TrendingUp} type="income"
-                trend={incomeTrend}
-                onClick={() => navigate(annualView ? `/receitas?year=${year}` : `/receitas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
-                hideValue={hideValues}
-              />
-              <FinanceMetricCard
-                title="Despesas" value={hideValues ? 0 : expense} icon={TrendingDown} type="expense"
-                trend={expenseTrend}
-                onClick={() => navigate(annualView ? `/despesas?year=${year}` : `/despesas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
-                hideValue={hideValues}
-              />
-              <FinanceMetricCard
-                title="Patrimônio" value={hideValues ? 0 : totalBalance} icon={Wallet}
-                type={totalBalance >= 0 ? 'income' : 'expense'}
-                hideValue={hideValues}
-              />
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <FinanceMetricCard
+                  title="Receitas" value={hideValues ? 0 : income} icon={TrendingUp} type="income"
+                  trend={incomeTrend}
+                  onClick={() => navigate(annualView ? `/receitas?year=${year}` : `/receitas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+                  hideValue={hideValues}
+                />
+                <FinanceMetricCard
+                  title="Despesas" value={hideValues ? 0 : expense} icon={TrendingDown} type="expense"
+                  trend={expenseTrend}
+                  onClick={() => navigate(annualView ? `/despesas?year=${year}` : `/despesas?month=${year}-${String(month + 1).padStart(2, '0')}`)}
+                  hideValue={hideValues}
+                />
+                <FinanceMetricCard
+                  title={annualView ? 'Resultado do Ano' : 'Resultado do Mês'}
+                  value={hideValues ? 0 : result} icon={BarChart3}
+                  type={result >= 0 ? 'income' : 'expense'}
+                  hideValue={hideValues}
+                />
+                <FinanceMetricCard
+                  title="Saldo Final"
+                  value={hideValues ? 0 : summary.finalBalance} icon={DollarSign}
+                  type={summary.finalBalance >= 0 ? 'info' : 'expense'}
+                  subtitle={`Saldo inicial ${fmt(summary.openingBalance)}`}
+                  hideValue={hideValues}
+                />
+              </div>
+
+              <div className="finance-card !p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'hsl(var(--finance-income) / 0.1)' }}>
+                      <Wallet className="h-4 w-4 finance-income" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Patrimônio Líquido</p>
+                      <p className={`text-lg font-bold truncate ${netWorth.netWorth >= 0 ? 'finance-income' : 'finance-expense'}`}>
+                        {fmt(netWorth.netWorth)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Contas</p>
+                    <p className="text-sm font-semibold mt-0.5 truncate">{fmt(netWorth.cash)}</p>
+                  </div>
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Investimentos</p>
+                    <p className="text-sm font-semibold mt-0.5 truncate">{fmt(netWorth.investments)}</p>
+                  </div>
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Dívidas</p>
+                    <p className="text-sm font-semibold finance-expense mt-0.5 truncate">-{fmt(netWorth.debts)}</p>
+                  </div>
+                  <div className="rounded-xl bg-accent/50 p-2.5">
+                    <p className="text-[10px] text-muted-foreground">Faturas abertas</p>
+                    <p className="text-sm font-semibold finance-expense mt-0.5 truncate">-{fmt(netWorth.cardLiabilities)}</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </DashboardSortableCard>
         );
       case 'credit-cards-summary':
+
         if (!ccSummary || annualView || (ccSummary.openTotal === 0 && ccSummary.closedTotal === 0 && ccSummary.overdueTotal === 0 && ccSummary.futureTotal === 0)) return null;
         return (
           <DashboardSortableCard id="credit-cards-summary" key="credit-cards-summary" className="col-span-full">
