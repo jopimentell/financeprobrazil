@@ -6,6 +6,7 @@ import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { Transaction } from '@/types/finance';
 import { Plus, ArrowDownCircle, BarChart3 } from 'lucide-react';
+import { monthOf } from '@/utils/periodUtils';
 
 const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 
@@ -44,7 +45,7 @@ export default function Receitas() {
     return transactions
       .filter(t => t.type === 'income')
       .filter(t => { const d = new Date(t.date); if (annualView) return d.getFullYear() === year; return d.getFullYear() === year && d.getMonth() === month; })
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [transactions, year, month, annualView]);
 
   const total = incomes.reduce((s, t) => s + t.amount, 0);
@@ -87,7 +88,7 @@ export default function Receitas() {
           <h3 className="text-sm font-semibold mb-3">Resumo por Mês</h3>
           <div className="space-y-1">
             {monthNames.map((name, i) => {
-              const mTx = incomes.filter(t => new Date(t.date).getMonth() === i);
+              const mTx = incomes.filter(t => monthOf(t.date) === i);
               const inc = mTx.reduce((s, t) => s + t.amount, 0);
               if (inc === 0 && mTx.length === 0) return null;
               return (

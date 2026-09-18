@@ -1,5 +1,6 @@
 import { Transaction } from '@/types/finance';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { monthOf } from '@/utils/periodUtils';
 
 interface CashFlowChartProps {
   transactions: Transaction[];
@@ -13,7 +14,7 @@ export function CashFlowChart({ transactions, mode = 'month' }: CashFlowChartPro
 
   if (mode === 'year') {
     data = monthLabels.map((name, i) => {
-      const monthTx = transactions.filter(t => new Date(t.date).getMonth() === i);
+      const monthTx = transactions.filter(t => monthOf(t.date) === i);
       return {
         name,
         receitas: monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),

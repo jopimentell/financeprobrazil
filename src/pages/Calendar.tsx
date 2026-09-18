@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useFinance } from '@/contexts/FinanceContext';
 import { MonthNavigator } from '@/components/MonthNavigator';
+import { dayOf } from '@/utils/periodUtils';
 
 const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -20,7 +21,7 @@ export default function Calendar() {
   const nextMonth = () => { if (month === 11) { setMonth(0); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
   const getTransactionsForDay = (day: number) => {
-    return transactions.filter(t => new Date(t.date).getDate() === day);
+    return transactions.filter(t => dayOf(t.date) === day);
   };
 
   return (
