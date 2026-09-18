@@ -146,11 +146,13 @@ export default function Transactions() {
           <p className="text-base font-bold finance-expense mt-1">R$ {totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="finance-card !p-3 text-center">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Saldo</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Resultado</p>
           <p className={`text-base font-bold mt-1 ${totalIncome - totalExpense >= 0 ? 'finance-income' : 'finance-expense'}`}>
             R$ {(totalIncome - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">dos itens filtrados</p>
         </div>
+
       </div>
 
       {/* Quick Add - Compact */}
