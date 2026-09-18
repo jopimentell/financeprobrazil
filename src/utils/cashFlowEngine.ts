@@ -8,6 +8,7 @@
 
 import { Account, Transaction } from '@/types/finance';
 import { computeGlobalBalance } from '@/utils/balanceEngine';
+import { parseLocalDate, previousDayISO, toISODate } from '@/utils/periodUtils';
 
 export interface CashFlowFilters {
   from: string; // YYYY-MM-DD inclusive
@@ -61,11 +62,7 @@ export function filterCashFlow(transactions: Transaction[], f: CashFlowFilters):
   return transactions.filter((t) => matchesFilters(t, f));
 }
 
-function previousDay(date: string): string {
-  const d = new Date(date + 'T12:00:00');
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().split('T')[0];
-}
+const previousDay = previousDayISO;
 
 /**
  * Opening balance for the period. When an account filter is active the opening
@@ -191,11 +188,11 @@ export function computeDailySeries(
   f: CashFlowFilters,
 ): DailyPoint[] {
   const map = new Map<string, DailyPoint>();
-  const cursor = new Date(f.from + 'T12:00:00');
-  const end = new Date(f.to + 'T12:00:00');
+  const cursor = parseLocalDate(f.from);
+  const end = parseLocalDate(f.to);
   let guard = 0;
   while (cursor <= end && guard < 400) {
-    const key = cursor.toISOString().split('T')[0];
+    const key = toISODate(cursor);
     map.set(key, { date: key, label: key.slice(8, 10) + '/' + key.slice(5, 7), receitas: 0, despesas: 0 });
     cursor.setDate(cursor.getDate() + 1);
     guard++;
