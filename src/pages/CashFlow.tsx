@@ -23,12 +23,13 @@ import {
 import {
   exportCashFlowCSV, exportCashFlowPDF, exportCashFlowXLSX,
 } from '@/utils/cashFlowExport';
+import { toISODate } from '@/utils/periodUtils';
 
 const monthLong = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 type PeriodMode = 'month' | 'year' | 'custom';
 
 const brl = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-const iso = (d: Date) => d.toISOString().split('T')[0];
+const iso = (d: Date) => toISODate(d);
 const dateBR = (s: string) => s.split('-').reverse().join('/');
 const weekday = (s: string) =>
   new Date(s + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long' });
