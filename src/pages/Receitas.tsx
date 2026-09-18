@@ -6,7 +6,7 @@ import { TransactionTable } from '@/components/TransactionTable';
 import { TransactionModal } from '@/components/TransactionModal';
 import { Transaction } from '@/types/finance';
 import { Plus, ArrowDownCircle, BarChart3 } from 'lucide-react';
-import { monthOf } from '@/utils/periodUtils';
+import { isInMonth, isInYear, monthOf } from '@/utils/periodUtils';
 
 const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
 

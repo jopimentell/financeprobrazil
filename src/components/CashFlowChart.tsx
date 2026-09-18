@@ -1,6 +1,6 @@
 import { Transaction } from '@/types/finance';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { monthOf } from '@/utils/periodUtils';
+import { dayOf, monthOf } from '@/utils/periodUtils';
 
 interface CashFlowChartProps {
   transactions: Transaction[];

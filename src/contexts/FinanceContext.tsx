@@ -3,7 +3,7 @@ import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, 
 import { useAuth } from '@/contexts/AuthContext';
 import * as financeService from '@/services/financeService';
 import { supabase } from '@/integrations/supabase/client';
-import { yearOf, todayISO } from '@/utils/periodUtils';
+import { isInMonth, todayISO, yearOf } from '@/utils/periodUtils';
 
 interface FinanceContextType {
   transactions: Transaction[];

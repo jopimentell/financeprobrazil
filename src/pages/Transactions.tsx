@@ -10,7 +10,7 @@ import { Plus, Filter, Upload, Send, ChevronDown, Search, CalendarRange } from '
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory } from '@/utils/transactionIntelligence';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { todayISO } from '@/utils/periodUtils';
+import { isInMonth, todayISO } from '@/utils/periodUtils';
 
 export default function Transactions() {
   const {
