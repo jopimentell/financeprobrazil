@@ -181,3 +181,38 @@ describe('Pendentes só entram quando pedido', () => {
     expect(computeMonthSummary(accounts, transactions, 2026, 0, { includePending: true }).expense).toBe(210);
   });
 });
+
+/**
+ * Cenário 7 — dados reais do FinancePro (conta progr.jopimentell@gmail.com).
+ * Não existe movimento antes de 2026-01-01, portanto janeiro abre em 0,00.
+ * Janeiro: receitas 1.183,66 / despesas 187,09 → resultado 996,57 e saldo final 996,57.
+ * Fevereiro DEVE abrir com 996,57 (e não com 0,00):
+ *   receitas 1.029,94 / despesas 1.282,67 → resultado -252,73 e saldo final 743,84.
+ * A transferência de janeiro (101,64) não altera receitas, despesas nem saldo total.
+ */
+describe('Cenário 7 — continuidade com dados reais', () => {
+  const accounts = [acc('carteira', 0), acc('inter', 0)];
+  const transactions = [
+    tx({ type: 'income', amount: 1183.66, date: '2026-01-10', accountId: 'inter' }),
+    tx({ type: 'expense', amount: 187.09, date: '2026-01-15', accountId: 'inter' }),
+    tx({ type: 'transfer', amount: 101.64, date: '2026-01-20', accountId: 'inter', transferAccountId: 'carteira' }),
+    tx({ type: 'income', amount: 1029.94, date: '2026-02-10', accountId: 'inter' }),
+    tx({ type: 'expense', amount: 1282.67, date: '2026-02-18', accountId: 'inter' }),
+  ];
+
+  it('janeiro fecha com 996,57', () => {
+    const jan = computeMonthSummary(accounts, transactions, 2026, 0);
+    expect(jan.openingBalance).toBeCloseTo(0, 2);
+    expect(jan.income).toBeCloseTo(1183.66, 2);
+    expect(jan.expense).toBeCloseTo(187.09, 2);
+    expect(jan.result).toBeCloseTo(996.57, 2);
+    expect(jan.finalBalance).toBeCloseTo(996.57, 2);
+  });
+
+  it('fevereiro abre com o saldo final de janeiro e fecha positivo apesar do resultado negativo', () => {
+    const feb = computeMonthSummary(accounts, transactions, 2026, 1);
+    expect(feb.openingBalance).toBeCloseTo(996.57, 2);
+    expect(feb.result).toBeCloseTo(-252.73, 2);
+    expect(feb.finalBalance).toBeCloseTo(743.84, 2);
+  });
+});
