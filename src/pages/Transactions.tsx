@@ -86,11 +86,8 @@ export default function Transactions() {
 
   const filtered = useMemo(() => {
     return transactions
-      .filter(t => {
-        if (showAllPeriods) return true;
-        const d = new Date(t.date);
-        return d.getFullYear() === year && d.getMonth() === month;
-      })
+      .filter(t => showAllPeriods || isInMonth(t.date, year, month))
+
       .filter(t => filterType === 'all' || t.type === filterType)
       .filter(t => filterCategory === 'all' || t.categoryId === filterCategory)
       .filter(t => filterStatus === 'all' || t.status === filterStatus)
