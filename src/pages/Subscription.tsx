@@ -4,13 +4,14 @@ import { Progress } from '@/components/ui/progress';
 import { Crown, ArrowRight, Sparkles, Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { allFeatures, featureCategoryLabels } from '@/data/planData';
+import { isInMonth } from '@/utils/periodUtils';
 
 export default function SubscriptionPage() {
   const { currentPlan, currentLimits, currentSubscription, settings, getPlanEnabledKeys } = usePlan();
   const { accounts, categories, transactions } = useFinance();
 
   const now = new Date();
-  const monthTx = transactions.filter(t => { const d = new Date(t.date); return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth(); }).length;
+  const monthTx = transactions.filter(t => isInMonth(t.date, now.getFullYear(), now.getMonth())).length;
 
   const enabledKeys = currentPlan ? getPlanEnabledKeys(currentPlan.id) : [];
 

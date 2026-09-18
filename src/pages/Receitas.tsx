@@ -44,7 +44,7 @@ export default function Receitas() {
   const incomes = useMemo(() => {
     return transactions
       .filter(t => t.type === 'income')
-      .filter(t => { const d = new Date(t.date); if (annualView) return d.getFullYear() === year; return d.getFullYear() === year && d.getMonth() === month; })
+      .filter(t => annualView ? isInYear(t.date, year) : isInMonth(t.date, year, month))
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [transactions, year, month, annualView]);
 

@@ -25,8 +25,7 @@ export function CashFlowChart({ transactions, mode = 'month' }: CashFlowChartPro
     // Group by week
     const weeks: Record<string, { receitas: number; despesas: number }> = {};
     transactions.forEach(t => {
-      const d = new Date(t.date);
-      const week = `Sem ${Math.ceil(d.getDate() / 7)}`;
+      const week = `Sem ${Math.ceil(dayOf(t.date) / 7)}`;
       if (!weeks[week]) weeks[week] = { receitas: 0, despesas: 0 };
       if (t.type === 'income') weeks[week].receitas += t.amount;
       else weeks[week].despesas += t.amount;

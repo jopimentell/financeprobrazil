@@ -272,7 +272,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const syncToSheet = useCallback(() => { console.log('Syncing to Google Sheets...'); }, []);
 
   const getMonthTransactions = useCallback((year: number, month: number) => {
-    return transactions.filter(t => { const d = new Date(t.date); return d.getFullYear() === year && d.getMonth() === month; });
+    return transactions.filter(t => isInMonth(t.date, year, month));
   }, [transactions]);
 
   const getYearTransactions = useCallback((year: number) => {
