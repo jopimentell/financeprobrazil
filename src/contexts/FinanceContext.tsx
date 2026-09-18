@@ -3,6 +3,7 @@ import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, 
 import { useAuth } from '@/contexts/AuthContext';
 import * as financeService from '@/services/financeService';
 import { supabase } from '@/integrations/supabase/client';
+import { isInMonth, todayISO, yearOf } from '@/utils/periodUtils';
 
 interface FinanceContextType {
   transactions: Transaction[];
@@ -271,11 +272,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const syncToSheet = useCallback(() => { console.log('Syncing to Google Sheets...'); }, []);
 
   const getMonthTransactions = useCallback((year: number, month: number) => {
-    return transactions.filter(t => { const d = new Date(t.date); return d.getFullYear() === year && d.getMonth() === month; });
+    return transactions.filter(t => isInMonth(t.date, year, month));
   }, [transactions]);
 
   const getYearTransactions = useCallback((year: number) => {
-    return transactions.filter(t => new Date(t.date).getFullYear() === year);
+    return transactions.filter(t => yearOf(t.date) === year);
   }, [transactions]);
 
   const getCategoryName = useCallback((id: string) => {
@@ -301,7 +302,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
 
   const addCreditCardFn = useCallback((c: Omit<CreditCard, 'id' | 'userId' | 'createdAt'>) => {
     const id = crypto.randomUUID();
-    const newCard: CreditCard = { ...c, id, userId: currentUserId, createdAt: new Date().toISOString().split('T')[0] };
+    const newCard: CreditCard = { ...c, id, userId: currentUserId, createdAt: todayISO() };
     setCreditCards(prev => [...prev, newCard]);
     financeService.addCreditCard(currentUserId, c).catch(() => {});
   }, [currentUserId]);

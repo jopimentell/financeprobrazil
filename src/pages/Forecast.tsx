@@ -8,16 +8,24 @@ const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
 const monthShort = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
 export default function ForecastPage() {
-  const { forecast, updateForecast } = useFinance();
+  const { forecast, updateForecast, accounts, transactions } = useFinance();
   const [year, setYear] = useState(new Date().getFullYear());
   const [editIdx, setEditIdx] = useState<number | null>(null);
 
-  const chartData = forecast.map((f, i) => ({
-    name: monthShort[i] || `M${i + 1}`,
-    receitas: f.expectedIncome,
-    despesas: f.expectedExpenses,
-    saldo: f.projectedBalance,
-  }));
+  // Saldo disponível hoje (fonte única de verdade) — ponto de partida da projeção.
+  const openingBalance = computeCashBalance(accounts, transactions);
+
+  let acc = openingBalance;
+  const chartData = forecast.map((f, i) => {
+    acc += f.expectedIncome - f.expectedExpenses;
+    return {
+      name: monthShort[i] || `M${i + 1}`,
+      receitas: f.expectedIncome,
+      despesas: f.expectedExpenses,
+      saldo: acc,
+    };
+  });
+  const projectedFinal = acc;
 
   const handleEdit = (idx: number, field: 'expectedIncome' | 'expectedExpenses', value: number) => {
     const updated = [...forecast];
@@ -29,6 +37,7 @@ export default function ForecastPage() {
   const totalExpenses = forecast.reduce((s, f) => s + f.expectedExpenses, 0);
 
   const fmt = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`;
+
 
   return (
     <div className="space-y-4 animate-fade-in">

@@ -7,6 +7,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Checkbox } from '@/components/ui/checkbox';
 import { CategoryPicker } from '@/components/CategoryPicker';
 import { ConvertToTransferModal } from '@/components/ConvertToTransferModal';
+import { formatDateBR, todayISO } from '@/utils/periodUtils';
 
 interface TransactionTableProps {
   transactions: Transaction[];
@@ -82,7 +83,7 @@ export function TransactionTable({
   };
   const handleDuplicate = (t: Transaction) => {
     const { id, ...rest } = t;
-    addTransaction({ ...rest, date: new Date().toISOString().split('T')[0], status: 'pending' });
+    addTransaction({ ...rest, date: todayISO(), status: 'pending' });
     toast.success('Transação duplicada');
   };
   const handleQuickCategory = useCallback(
@@ -166,7 +167,7 @@ export function TransactionTable({
               {isExpanded && (
                 <div className="mt-3 pt-3 border-t border-border space-y-2 animate-fade-in" onClick={(e) => e.stopPropagation()}>
                   <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span>Data: {new Date(t.date).toLocaleDateString('pt-BR')}</span>
+                    <span>Data: {formatDateBR(t.date)}</span>
                     {t.origin && t.origin !== 'manual' && (
                       <span className="px-1.5 py-0.5 rounded bg-accent text-accent-foreground text-[10px]">
                         {t.origin === 'importacao' ? 'Importado' : t.origin === 'parcelamento' ? `${t.parcelaAtual}/${t.totalParcelas}` : t.origin}
@@ -243,7 +244,7 @@ export function TransactionTable({
                       </div>
                     </td>
                   )}
-                  <td className="py-3 px-2 text-muted-foreground whitespace-nowrap">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                  <td className="py-3 px-2 text-muted-foreground whitespace-nowrap">{formatDateBR(t.date)}</td>
                   <td className="py-3 px-2 font-medium">
                     <div className="flex items-center gap-2 min-w-0">
                       {t.type === 'transfer' && <ArrowLeftRight className="h-3.5 w-3.5 text-slate-500 shrink-0" />}

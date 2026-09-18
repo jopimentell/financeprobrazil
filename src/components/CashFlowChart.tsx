@@ -1,5 +1,6 @@
 import { Transaction } from '@/types/finance';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { dayOf, monthOf } from '@/utils/periodUtils';
 
 interface CashFlowChartProps {
   transactions: Transaction[];
@@ -13,7 +14,7 @@ export function CashFlowChart({ transactions, mode = 'month' }: CashFlowChartPro
 
   if (mode === 'year') {
     data = monthLabels.map((name, i) => {
-      const monthTx = transactions.filter(t => new Date(t.date).getMonth() === i);
+      const monthTx = transactions.filter(t => monthOf(t.date) === i);
       return {
         name,
         receitas: monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),
@@ -24,8 +25,7 @@ export function CashFlowChart({ transactions, mode = 'month' }: CashFlowChartPro
     // Group by week
     const weeks: Record<string, { receitas: number; despesas: number }> = {};
     transactions.forEach(t => {
-      const d = new Date(t.date);
-      const week = `Sem ${Math.ceil(d.getDate() / 7)}`;
+      const week = `Sem ${Math.ceil(dayOf(t.date) / 7)}`;
       if (!weeks[week]) weeks[week] = { receitas: 0, despesas: 0 };
       if (t.type === 'income') weeks[week].receitas += t.amount;
       else weeks[week].despesas += t.amount;

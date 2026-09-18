@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useFinance } from '@/contexts/FinanceContext';
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { isInMonth } from '@/utils/periodUtils';
 
 const COLORS = ['#22c55e', '#ef4444', '#3b82f6', '#f97316', '#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#6b7280', '#10b981'];
 
@@ -31,7 +32,7 @@ export default function AdminAnalyticsPage() {
     return Array.from({ length: 12 }, (_, i) => {
       const m = (currentMonth - 11 + i + 12) % 12;
       const y = currentMonth - 11 + i < 0 ? currentYear - 1 : currentYear;
-      const monthTx = allTransactions.filter(t => { const d = new Date(t.date); return d.getMonth() === m && d.getFullYear() === y; });
+      const monthTx = allTransactions.filter(t => isInMonth(t.date, y, m));
       return {
         month: new Date(y, m, 1).toLocaleDateString('pt-BR', { month: 'short' }),
         receitas: monthTx.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0),

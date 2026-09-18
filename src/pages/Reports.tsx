@@ -194,35 +194,39 @@ export default function Reports() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="finance-card !p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--finance-income) / 0.1)' }}>
-              <TrendingUp className="h-3.5 w-3.5 finance-income" />
-            </div>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1" style={{ backgroundColor: 'hsl(var(--finance-income) / 0.1)' }}>
+            <TrendingUp className="h-3.5 w-3.5 finance-income" />
           </div>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Receitas</p>
           <p className="text-sm sm:text-base font-bold finance-income mt-0.5 truncate">{fmt(totalIncome)}</p>
         </div>
         <div className="finance-card !p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--finance-expense) / 0.1)' }}>
-              <TrendingDown className="h-3.5 w-3.5 finance-expense" />
-            </div>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1" style={{ backgroundColor: 'hsl(var(--finance-expense) / 0.1)' }}>
+            <TrendingDown className="h-3.5 w-3.5 finance-expense" />
           </div>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Despesas</p>
           <p className="text-sm sm:text-base font-bold finance-expense mt-0.5 truncate">{fmt(totalExpense)}</p>
         </div>
         <div className="finance-card !p-3">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: 'hsl(var(--finance-info) / 0.1)' }}>
-              <DollarSign className="h-3.5 w-3.5 finance-info" />
-            </div>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1" style={{ backgroundColor: 'hsl(var(--muted))' }}>
+            <Scale className="h-3.5 w-3.5 text-foreground" />
           </div>
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Saldo</p>
-          <p className={`text-sm sm:text-base font-bold mt-0.5 truncate ${totalBalance >= 0 ? 'finance-income' : 'finance-expense'}`}>{fmt(totalBalance)}</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Resultado</p>
+          <p className={`text-sm sm:text-base font-bold mt-0.5 truncate ${result >= 0 ? 'finance-income' : 'finance-expense'}`}>{fmt(result)}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Receitas − Despesas</p>
+        </div>
+        <div className="finance-card !p-3">
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1" style={{ backgroundColor: 'hsl(var(--finance-info) / 0.1)' }}>
+            <DollarSign className="h-3.5 w-3.5 finance-info" />
+          </div>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Saldo Final</p>
+          <p className={`text-sm sm:text-base font-bold mt-0.5 truncate ${summary.finalBalance >= 0 ? 'finance-income' : 'finance-expense'}`}>{fmt(summary.finalBalance)}</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Inicial {fmt(summary.openingBalance)}</p>
         </div>
       </div>
+
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Timeline */}

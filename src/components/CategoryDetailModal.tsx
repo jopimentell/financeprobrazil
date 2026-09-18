@@ -15,6 +15,7 @@ import {
   Line,
 } from 'recharts';
 import { TrendingUp, TrendingDown, Lightbulb, Receipt, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { monthOf, formatDateBR } from '@/utils/periodUtils';
 
 interface CategoryDetailModalProps {
   open: boolean;
@@ -42,7 +43,7 @@ export function CategoryDetailModal({ open, onClose, categoryId, year, transacti
     const max = Math.max(...amounts);
     const min = Math.min(...amounts);
     const avgTicket = total / categoryTx.length;
-    const monthsWithTx = new Set(categoryTx.map((t) => new Date(t.date).getMonth())).size || 1;
+    const monthsWithTx = new Set(categoryTx.map((t) => monthOf(t.date))).size || 1;
     const monthlyAvg = total / monthsWithTx;
     return {
       total,
@@ -73,7 +74,7 @@ export function CategoryDetailModal({ open, onClose, categoryId, year, transacti
   const monthlyTimeline = useMemo(
     () =>
       monthNames.map((name, i) => {
-        const mTx = categoryTx.filter((t) => new Date(t.date).getMonth() === i);
+        const mTx = categoryTx.filter((t) => monthOf(t.date) === i);
         return { name, value: mTx.reduce((s, t) => s + t.amount, 0) };
       }),
     [categoryTx],
@@ -245,7 +246,7 @@ export function CategoryDetailModal({ open, onClose, categoryId, year, transacti
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{t.description}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {new Date(t.date).toLocaleDateString('pt-BR')}
+                        {formatDateBR(t.date)}
                       </p>
                     </div>
                     <p className={`text-xs font-semibold shrink-0 ${t.type === 'income' ? 'finance-income' : 'finance-expense'}`}>

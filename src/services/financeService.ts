@@ -6,6 +6,7 @@
 
 import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant } from '@/types/finance';
 import { supabase } from '@/integrations/supabase/client';
+import { dayOf, monthOf, parseLocalDate, toISODate, todayISO, yearOf } from '@/utils/periodUtils';
 
 const uid = () => crypto.randomUUID();
 
@@ -270,7 +271,7 @@ export async function addDebtWithInstallments(
 
   const numInstallments = d.installments || 1;
   const installmentAmount = Math.round((d.totalAmount / numInstallments) * 100) / 100;
-  const startDate = new Date(d.dueDate);
+  const startDate = parseLocalDate(d.dueDate);
   const generatedTxs: Transaction[] = [];
 
   for (let i = 0; i < numInstallments; i++) {
@@ -281,7 +282,7 @@ export async function addDebtWithInstallments(
       description: `${d.creditor} (${i + 1}/${numInstallments})`,
       amount: installmentAmount, type: 'expense',
       categoryId, accountId,
-      date: txDate.toISOString().split('T')[0],
+      date: toISODate(txDate),
       status: 'pending', recurrence: 'none',
       parcelamentoId: debtId, origin: 'parcelamento',
       parcelaAtual: i + 1, totalParcelas: numInstallments,
@@ -335,8 +336,7 @@ export async function deleteDebt(userId: string, id: string): Promise<void> {
   if (txs) {
     const currentMonth = now.getFullYear() * 12 + now.getMonth();
     const futureIds = txs.filter((tx: any) => {
-      const d = new Date(tx.date);
-      return (d.getFullYear() * 12 + d.getMonth()) > currentMonth;
+      return (yearOf(tx.date) * 12 + monthOf(tx.date)) > currentMonth;
     }).map((tx: any) => tx.id);
 
     if (futureIds.length > 0) {
@@ -447,7 +447,7 @@ export async function addCreditCardExpense(
       userId, cardId: e.cardId,
       description: numInstallments > 1 ? `${e.description} (${i + 1}/${numInstallments})` : e.description,
       amount: installmentAmount, category: e.category,
-      purchaseDate: txDate.toISOString().split('T')[0],
+      purchaseDate: toISODate(txDate),
       currentInstallment: i + 1, totalInstallments: numInstallments,
       parentExpenseId: i === 0 ? undefined : parentId,
     };
@@ -497,7 +497,7 @@ export async function markInvoicePaid(
     id: txId, userId,
     description: `Pagamento fatura ${cardName} - ${month}`,
     amount, type: 'expense', categoryId, accountId,
-    date: new Date().toISOString().split('T')[0],
+    date: todayISO(),
     status: 'paid', recurrence: 'none', origin: 'manual',
   };
 
@@ -534,9 +534,9 @@ export function computeInvoices(
 
   const grouped: Record<string, CreditCardExpense[]> = {};
   expenses.forEach(exp => {
-    const d = new Date(exp.purchaseDate);
+    const d = parseLocalDate(exp.purchaseDate);
     let invoiceMonth: Date;
-    if (d.getDate() > card.closingDay) {
+    if (dayOf(exp.purchaseDate) > card.closingDay) {
       invoiceMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
     } else {
       invoiceMonth = new Date(d.getFullYear(), d.getMonth(), 1);
@@ -550,7 +550,7 @@ export function computeInvoices(
     .map(([month, exps]) => {
       const [y, m] = month.split('-').map(Number);
       const dueDate = new Date(y, m - 1, card.dueDay);
-      const dueDateStr = dueDate.toISOString().split('T')[0];
+      const dueDateStr = toISODate(dueDate);
 
       let status: 'open' | 'closed' | 'overdue' | 'paid' | 'future';
       if (paidMap.has(month)) {

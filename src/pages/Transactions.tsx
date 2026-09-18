@@ -10,6 +10,7 @@ import { Plus, Filter, Upload, Send, ChevronDown, Search, CalendarRange } from '
 import { toast } from 'sonner';
 import { detectTransactionType, suggestCategory } from '@/utils/transactionIntelligence';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { isInMonth, todayISO } from '@/utils/periodUtils';
 
 export default function Transactions() {
   const {
@@ -40,7 +41,7 @@ export default function Transactions() {
   const [quickAmount, setQuickAmount] = useState('');
   const [quickType, setQuickType] = useState<'income' | 'expense'>('expense');
   const [quickCategoryId, setQuickCategoryId] = useState('');
-  const [quickDate, setQuickDate] = useState(new Date().toISOString().split('T')[0]);
+  const [quickDate, setQuickDate] = useState(todayISO());
   const descRef = useRef<HTMLInputElement>(null);
 
   const expenseCategories = useMemo(() => categories.filter(c => c.type === 'expense'), [categories]);
@@ -73,7 +74,7 @@ export default function Transactions() {
     });
     toast.success('Transação adicionada!');
     setQuickDesc(''); setQuickAmount(''); setQuickCategoryId('');
-    setQuickDate(new Date().toISOString().split('T')[0]);
+    setQuickDate(todayISO());
     descRef.current?.focus();
   }, [quickDesc, quickAmount, quickType, quickCategoryId, quickDate, quickCategories, accounts, addTransaction]);
 
@@ -85,17 +86,14 @@ export default function Transactions() {
 
   const filtered = useMemo(() => {
     return transactions
-      .filter(t => {
-        if (showAllPeriods) return true;
-        const d = new Date(t.date);
-        return d.getFullYear() === year && d.getMonth() === month;
-      })
+      .filter(t => showAllPeriods || isInMonth(t.date, year, month))
+
       .filter(t => filterType === 'all' || t.type === filterType)
       .filter(t => filterCategory === 'all' || t.categoryId === filterCategory)
       .filter(t => filterStatus === 'all' || t.status === filterStatus)
       .filter(t => filterOrigin === 'all' || (t.origin || 'manual') === filterOrigin)
       .filter(t => !search || t.description.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => a.date.localeCompare(b.date));
   }, [transactions, showAllPeriods, year, month, filterType, filterCategory, filterStatus, filterOrigin, search]);
 
   // Summary
@@ -148,11 +146,13 @@ export default function Transactions() {
           <p className="text-base font-bold finance-expense mt-1">R$ {totalExpense.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
         </div>
         <div className="finance-card !p-3 text-center">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Saldo</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Resultado</p>
           <p className={`text-base font-bold mt-1 ${totalIncome - totalExpense >= 0 ? 'finance-income' : 'finance-expense'}`}>
             R$ {(totalIncome - totalExpense).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">dos itens filtrados</p>
         </div>
+
       </div>
 
       {/* Quick Add - Compact */}

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { formatDateBR } from '@/utils/periodUtils';
 
 export default function AdminUserDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -278,7 +279,7 @@ export default function AdminUserDetailPage() {
             <tbody>
               {paginated.map(t => (
                 <tr key={t.id} className="border-b border-border/50 hover:bg-accent/30 transition-colors">
-                  <td className="py-3 px-4 text-muted-foreground">{new Date(t.date).toLocaleDateString('pt-BR')}</td>
+                  <td className="py-3 px-4 text-muted-foreground">{formatDateBR(t.date)}</td>
                   <td className="py-3 px-4 font-medium">{t.description}</td>
                   <td className="py-3 px-4 hidden sm:table-cell text-muted-foreground">{getCategoryName(t.categoryId)}</td>
                   <td className="py-3 px-4 text-center">
