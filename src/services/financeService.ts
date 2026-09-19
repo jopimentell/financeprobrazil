@@ -4,11 +4,25 @@
  * Read operations return from Supabase directly.
  */
 
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant, Person, FinancialNature, NatureSource } from '@/types/finance';
 import { supabase } from '@/integrations/supabase/client';
 import { dayOf, monthOf, parseLocalDate, toISODate, todayISO, yearOf } from '@/utils/periodUtils';
 
 const uid = () => crypto.randomUUID();
+
+/** Columns of the financial-nature layer (second classification layer). */
+function natureColumns(t: Partial<Transaction>) {
+  return {
+    nature: t.nature || 'unclassified',
+    person_id: t.personId || null,
+    related_transaction_id: t.relatedTransactionId || null,
+    parent_transaction_id: t.parentTransactionId || null,
+    related_debt_id: t.relatedDebtId || null,
+    reserve_goal: t.reserveGoal || null,
+    nature_confirmed: t.natureConfirmed ?? false,
+    nature_source: t.natureSource || 'manual',
+  };
+}
 
 // ── Helper: map DB row to TypeScript type ──────────────
 
@@ -23,6 +37,14 @@ function mapTransaction(row: any): Transaction {
     accountId: row.account_id || '',
     transferAccountId: row.transfer_account_id || undefined,
     merchantId: row.merchant_id || undefined,
+    nature: row.nature || 'unclassified',
+    personId: row.person_id || undefined,
+    relatedTransactionId: row.related_transaction_id || undefined,
+    parentTransactionId: row.parent_transaction_id || undefined,
+    relatedDebtId: row.related_debt_id || undefined,
+    reserveGoal: row.reserve_goal || undefined,
+    natureConfirmed: !!row.nature_confirmed,
+    natureSource: (row.nature_source || 'manual') as NatureSource,
     date: row.date,
     status: row.status,
     recurrence: row.recurrence,
@@ -191,6 +213,7 @@ export async function addTransaction(userId: string, t: Omit<Transaction, 'id' |
     installments: t.installments, notes: t.notes,
     parcelamento_id: t.parcelamentoId, origin: t.origin || 'manual',
     parcela_atual: t.parcelaAtual, total_parcelas: t.totalParcelas,
+    ...natureColumns(t),
   };
   await supabase.from('transactions').insert(row);
   return { ...t, id, userId };
@@ -206,6 +229,7 @@ export async function updateTransaction(userId: string, t: Transaction): Promise
     installments: t.installments, notes: t.notes,
     parcelamento_id: t.parcelamentoId, origin: t.origin,
     parcela_atual: t.parcelaAtual, total_parcelas: t.totalParcelas,
+    ...natureColumns(t),
   }).eq('id', t.id).eq('user_id', userId);
 }
 
@@ -596,4 +620,134 @@ export async function seedDefaultData(userId: string): Promise<void> {
     { user_id: userId, name: 'Carteira', type: 'wallet' as const, balance: 0 },
   ];
   await supabase.from('accounts').insert(defaultAccounts);
+}
+
+
+// ── People (related persons for the nature layer) ───────
+
+function mapPerson(row: any): Person {
+  return { id: row.id, userId: row.user_id, name: row.name, notes: row.notes || undefined };
+}
+
+export async function fetchPeople(userId: string): Promise<Person[]> {
+  const { data } = await supabase.from('people').select('*').eq('user_id', userId).order('name');
+  return (data || []).map(mapPerson);
+}
+
+export async function addPerson(userId: string, p: Omit<Person, 'id' | 'userId'>): Promise<Person> {
+  const id = uid();
+  await supabase.from('people').insert({ id, user_id: userId, name: p.name, notes: p.notes || null });
+  return { ...p, id, userId };
+}
+
+export async function updatePerson(userId: string, p: Person): Promise<void> {
+  await supabase.from('people').update({ name: p.name, notes: p.notes || null })
+    .eq('id', p.id).eq('user_id', userId);
+}
+
+export async function deletePerson(userId: string, id: string): Promise<void> {
+  await supabase.from('transactions').update({ person_id: null })
+    .eq('person_id', id).eq('user_id', userId);
+  await supabase.from('people').delete().eq('id', id).eq('user_id', userId);
+}
+
+// ── Financial nature: bulk classification ──────────────
+
+export interface NaturePatch {
+  nature: FinancialNature;
+  personId?: string | null;
+  relatedDebtId?: string | null;
+  reserveGoal?: string | null;
+  relatedTransactionId?: string | null;
+  natureSource?: NatureSource;
+  natureConfirmed?: boolean;
+}
+
+export async function bulkUpdateNature(
+  userId: string,
+  transactionIds: string[],
+  patch: NaturePatch,
+): Promise<void> {
+  if (!transactionIds.length) return;
+  const row: Record<string, unknown> = {
+    nature: patch.nature,
+    nature_source: patch.natureSource || 'manual',
+    nature_confirmed: patch.natureConfirmed ?? true,
+  };
+  if (patch.personId !== undefined) row.person_id = patch.personId;
+  if (patch.relatedDebtId !== undefined) row.related_debt_id = patch.relatedDebtId;
+  if (patch.reserveGoal !== undefined) row.reserve_goal = patch.reserveGoal;
+  if (patch.relatedTransactionId !== undefined) row.related_transaction_id = patch.relatedTransactionId;
+
+  const chunk = 50;
+  for (let i = 0; i < transactionIds.length; i += chunk) {
+    await supabase.from('transactions').update(row)
+      .in('id', transactionIds.slice(i, i + chunk))
+      .eq('user_id', userId);
+  }
+}
+
+// ── Split a transaction into parts ─────────────────────
+
+export interface SplitPart {
+  description: string;
+  amount: number;
+  categoryId: string;
+  nature: FinancialNature;
+  personId?: string;
+  reserveGoal?: string;
+}
+
+/**
+ * Splits `parent` into N children. The parent row itself becomes the first part
+ * (so history, account and date stay intact) and the remaining parts are
+ * inserted as new transactions pointing back to it via parent_transaction_id.
+ */
+export async function splitTransaction(
+  userId: string,
+  parent: Transaction,
+  parts: SplitPart[],
+): Promise<{ updatedParent: Transaction; children: Transaction[] }> {
+  const [first, ...rest] = parts;
+  const updatedParent: Transaction = {
+    ...parent,
+    description: first.description || parent.description,
+    amount: first.amount,
+    categoryId: first.categoryId || parent.categoryId,
+    nature: first.nature,
+    personId: first.personId,
+    reserveGoal: first.reserveGoal,
+    natureConfirmed: true,
+    natureSource: 'manual',
+  };
+  await updateTransaction(userId, updatedParent);
+
+  const children: Transaction[] = rest.map((part) => ({
+    ...parent,
+    id: uid(),
+    description: part.description || parent.description,
+    amount: part.amount,
+    categoryId: part.categoryId || parent.categoryId,
+    nature: part.nature,
+    personId: part.personId,
+    reserveGoal: part.reserveGoal,
+    parentTransactionId: parent.id,
+    natureConfirmed: true,
+    natureSource: 'manual',
+  }));
+
+  if (children.length) {
+    await supabase.from('transactions').insert(children.map((c) => ({
+      id: c.id, user_id: userId, description: c.description, amount: c.amount,
+      type: c.type, category_id: c.categoryId || null, account_id: c.accountId || null,
+      transfer_account_id: c.transferAccountId || null, merchant_id: c.merchantId || null,
+      date: c.date, status: c.status, recurrence: c.recurrence,
+      installments: c.installments, notes: c.notes,
+      parcelamento_id: c.parcelamentoId, origin: c.origin,
+      parcela_atual: c.parcelaAtual, total_parcelas: c.totalParcelas,
+      ...natureColumns(c),
+    })));
+  }
+
+  return { updatedParent, children };
 }
