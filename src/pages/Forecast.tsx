@@ -58,12 +58,27 @@ export default function ForecastPage() {
           <span className="text-lg sm:text-2xl font-bold finance-expense truncate">{fmt(totalExpenses)}</span>
         </div>
         <div className="finance-metric">
-          <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">Saldo</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">Resultado</span>
           <span className={`text-lg sm:text-2xl font-bold truncate ${totalIncome - totalExpenses >= 0 ? 'finance-income' : 'finance-expense'}`}>
             {fmt(totalIncome - totalExpenses)}
           </span>
+          <span className="text-[10px] text-muted-foreground truncate">Receitas − Despesas</span>
         </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="finance-metric">
+          <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">Saldo inicial (hoje)</span>
+          <span className="text-lg sm:text-2xl font-bold truncate">{fmt(openingBalance)}</span>
+        </div>
+        <div className="finance-metric">
+          <span className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider font-medium">Saldo final projetado</span>
+          <span className={`text-lg sm:text-2xl font-bold truncate ${projectedFinal >= 0 ? 'finance-income' : 'finance-expense'}`}>
+            {fmt(projectedFinal)}
+          </span>
+        </div>
+      </div>
+
 
       {/* Chart */}
       <div className="finance-card">
