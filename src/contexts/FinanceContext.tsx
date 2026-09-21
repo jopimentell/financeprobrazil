@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant } from '@/types/finance';
+import { Transaction, Category, Account, Debt, Investment, Forecast, SystemLog, CreditCard, CreditCardExpense, PaidInvoice, Merchant, Person } from '@/types/finance';
+import * as categorizationService from '@/services/categorizationService';
+import type { CategorizationRule, RuleInput } from '@/services/categorizationService';
+import type { NaturePatch, SplitPart } from '@/services/financeService';
 import { useAuth } from '@/contexts/AuthContext';
 import * as financeService from '@/services/financeService';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +19,8 @@ interface FinanceContextType {
   creditCardExpenses: CreditCardExpense[];
   paidInvoices: PaidInvoice[];
   merchants: Merchant[];
+  people: Person[];
+  rules: CategorizationRule[];
   allTransactions: Transaction[];
   allCategories: Category[];
   allAccounts: Account[];
@@ -61,6 +66,14 @@ interface FinanceContextType {
   updateMerchant: (m: Merchant) => void;
   deleteMerchant: (id: string) => void;
   assignMerchantToTransactions: (transactionIds: string[], merchantId: string | null) => Promise<void>;
+  addPerson: (p: Omit<Person, 'id' | 'userId'>) => Promise<Person | null>;
+  updatePerson: (p: Person) => void;
+  deletePerson: (id: string) => void;
+  classifyTransactions: (transactionIds: string[], patch: NaturePatch) => Promise<void>;
+  splitTransaction: (parent: Transaction, parts: SplitPart[]) => Promise<void>;
+  addRule: (r: RuleInput) => Promise<CategorizationRule | null>;
+  deleteRule: (id: string) => void;
+  reloadRules: () => void;
 }
 
 const FinanceContext = createContext<FinanceContextType | null>(null);
@@ -81,6 +94,8 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
   const [paidInvoices, setPaidInvoices] = useState<PaidInvoice[]>([]);
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [rules, setRules] = useState<CategorizationRule[]>([]);
 
   const loadedUserRef = useRef<string>('');
 
@@ -93,7 +108,7 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       setTransactions([]); setCategories([]); setAccounts([]);
       setDebts([]); setInvestments([]); setForecast([]);
       setCreditCards([]); setCreditCardExpenses([]); setPaidInvoices([]);
-      setMerchants([]);
+      setMerchants([]); setPeople([]); setRules([]);
       financeService.getSystemLogs().then(logs => setSystemLogs(logs)).catch(() => {});
       return;
     }
@@ -112,6 +127,12 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
         setCreditCardExpenses(data.creditCardExpenses);
         setPaidInvoices(data.paidInvoices);
         setMerchants(data.merchants || []);
+        const [peopleData, rulesData] = await Promise.all([
+          financeService.fetchPeople(currentUserId),
+          categorizationService.fetchRules(currentUserId),
+        ]);
+        setPeople(peopleData);
+        setRules(rulesData);
       } catch (err) {
         console.error('[finance] Failed to load user data:', err);
       }
@@ -371,6 +392,63 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
     await financeService.assignMerchantToTransactions(currentUserId, ids, merchantId).catch(() => {});
   }, [currentUserId]);
 
+  // ── People / nature layer ────────────────────────────
+
+  const addPersonFn = useCallback(async (p: Omit<Person, 'id' | 'userId'>) => {
+    try {
+      const created = await financeService.addPerson(currentUserId, p);
+      setPeople(prev => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+      return created;
+    } catch (e) { console.error(e); return null; }
+  }, [currentUserId]);
+
+  const updatePersonFn = useCallback((p: Person) => {
+    setPeople(prev => prev.map(x => x.id === p.id ? p : x));
+    financeService.updatePerson(currentUserId, p).catch(() => {});
+  }, [currentUserId]);
+
+  const deletePersonFn = useCallback((id: string) => {
+    setPeople(prev => prev.filter(x => x.id !== id));
+    setTransactions(prev => prev.map(t => t.personId === id ? { ...t, personId: undefined } : t));
+    financeService.deletePerson(currentUserId, id).catch(() => {});
+  }, [currentUserId]);
+
+  const classifyTransactionsFn = useCallback(async (ids: string[], patch: NaturePatch) => {
+    setTransactions(prev => prev.map(t => ids.includes(t.id) ? {
+      ...t,
+      nature: patch.nature,
+      personId: patch.personId === undefined ? t.personId : (patch.personId || undefined),
+      relatedDebtId: patch.relatedDebtId === undefined ? t.relatedDebtId : (patch.relatedDebtId || undefined),
+      reserveGoal: patch.reserveGoal === undefined ? t.reserveGoal : (patch.reserveGoal || undefined),
+      relatedTransactionId: patch.relatedTransactionId === undefined ? t.relatedTransactionId : (patch.relatedTransactionId || undefined),
+      natureConfirmed: patch.natureConfirmed ?? true,
+      natureSource: patch.natureSource || 'manual',
+    } : t));
+    await financeService.bulkUpdateNature(currentUserId, ids, patch).catch(() => {});
+  }, [currentUserId]);
+
+  const splitTransactionFn = useCallback(async (parent: Transaction, parts: SplitPart[]) => {
+    const { updatedParent, children } = await financeService.splitTransaction(currentUserId, parent, parts);
+    setTransactions(prev => [...prev.map(t => t.id === updatedParent.id ? updatedParent : t), ...children]);
+  }, [currentUserId]);
+
+  const addRuleFn = useCallback(async (r: RuleInput) => {
+    try {
+      const created = await categorizationService.saveRuleFull(currentUserId, r);
+      setRules(prev => [...prev, created]);
+      return created;
+    } catch (e) { console.error(e); return null; }
+  }, [currentUserId]);
+
+  const deleteRuleFn = useCallback((id: string) => {
+    setRules(prev => prev.filter(r => r.id !== id));
+    categorizationService.deleteRule(currentUserId, id).catch(() => {});
+  }, [currentUserId]);
+
+  const reloadRulesFn = useCallback(() => {
+    categorizationService.fetchRules(currentUserId).then(setRules).catch(() => {});
+  }, [currentUserId]);
+
   return (
     <FinanceContext.Provider value={{
       transactions, categories, accounts, debts, investments, forecast,
@@ -397,6 +475,11 @@ export function FinanceProvider({ children }: { children: React.ReactNode }) {
       updateMerchant: updateMerchantFn,
       deleteMerchant: deleteMerchantFn,
       assignMerchantToTransactions: assignMerchantToTransactionsFn,
+      people, rules,
+      addPerson: addPersonFn, updatePerson: updatePersonFn, deletePerson: deletePersonFn,
+      classifyTransactions: classifyTransactionsFn,
+      splitTransaction: splitTransactionFn,
+      addRule: addRuleFn, deleteRule: deleteRuleFn, reloadRules: reloadRulesFn,
     }}>
       {children}
     </FinanceContext.Provider>
