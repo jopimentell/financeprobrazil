@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { Transaction, Category, Account, Merchant } from '@/types/finance';
-import { Tag, Wallet, Calendar as CalendarIcon, TrendingUp, TrendingDown, Trash2, X, Search, Check, Store, Plus } from 'lucide-react';
+import { Transaction, Category, Account, Merchant, FinancialNature } from '@/types/finance';
+import { NATURES } from '@/utils/natureEngine';
+import { Tag, Wallet, Calendar as CalendarIcon, TrendingUp, TrendingDown, Trash2, X, Search, Check, Store, Plus, Layers } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   AlertDialog,
@@ -26,6 +27,8 @@ interface BulkActionsBarProps {
   onDelete: () => Promise<void> | void;
   onAssignMerchant?: (merchantId: string | null) => Promise<void> | void;
   onCreateMerchant?: (name: string) => Promise<{ id: string } | null>;
+  /** Bulk-apply a financial nature (second classification layer) */
+  onClassify?: (nature: FinancialNature) => Promise<void> | void;
 }
 
 export function BulkActionsBar({
@@ -40,6 +43,7 @@ export function BulkActionsBar({
   onDelete,
   onAssignMerchant,
   onCreateMerchant,
+  onClassify,
 }: BulkActionsBarProps) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [catSearch, setCatSearch] = useState('');
@@ -239,6 +243,37 @@ export function BulkActionsBar({
                 </Popover>
               )}
 
+
+              {/* Financial nature */}
+              {onClassify && (
+                <Popover open={openPopover === 'nat'} onOpenChange={(o) => setOpenPopover(o ? 'nat' : null)}>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg hover:bg-accent text-xs font-medium min-h-[40px]">
+                      <Layers className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Natureza</span>
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 p-2" align="end">
+                    <p className="text-xs font-medium mb-2 px-1">O que essas movimentações representam?</p>
+                    <div className="max-h-72 overflow-y-auto space-y-0.5">
+                      {NATURES.filter((n) => n.value !== 'unclassified').map((n) => (
+                        <button
+                          key={n.value}
+                          onClick={async () => {
+                            await onClassify(n.value);
+                            toast.success(`"${n.label}" aplicado a ${count} lançamento(s)`);
+                            setOpenPopover(null);
+                          }}
+                          className="w-full flex flex-col items-start gap-0.5 px-2 py-2 rounded-md hover:bg-accent text-left"
+                        >
+                          <span className="text-xs font-medium">{n.label}</span>
+                          <span className="text-[10px] text-muted-foreground">{n.description}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
 
               {/* Change Date */}
               <Popover open={openPopover === 'date'} onOpenChange={(o) => setOpenPopover(o ? 'date' : null)}>
