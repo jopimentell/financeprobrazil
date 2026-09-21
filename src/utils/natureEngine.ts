@@ -305,3 +305,38 @@ export function computePersonBalances(transactions: Transaction[]): PersonBalanc
   }
   return Array.from(map.values()).sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance));
 }
+
+/**
+ * Keyword heuristics — used on import and on the "a identificar" queue to
+ * SUGGEST a nature. Suggestions are never confirmed automatically.
+ */
+const KEYWORDS: { nature: FinancialNature; words: string[] }[] = [
+  { nature: 'loan_received', words: ['emprestimo', 'empréstimo', 'emprest'] },
+  { nature: 'loan_repaid', words: ['pagamento emprestimo', 'quitacao', 'quitação', 'parcela emprestimo'] },
+  { nature: 'refund', words: ['reembolso', 'estorno', 'devolucao', 'devolução', 'ressarcimento'] },
+  { nature: 'reserve', words: ['poupanca', 'poupança', 'reserva', 'aporte', 'investimento', 'cdb', 'tesouro'] },
+  { nature: 'transfer_out', words: ['repasse', 'pago para', 'pix para'] },
+  { nature: 'transfer_in', words: ['recebido de', 'pix recebido'] },
+];
+
+function normalize(text: string): string {
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Suggested nature for a movement, or undefined when nothing is obvious. */
+export function suggestNature(description: string, type: TransactionType): FinancialNature | undefined {
+  if (type === 'transfer') return 'internal_transfer';
+  const text = normalize(description);
+  for (const entry of KEYWORDS) {
+    if (entry.words.some(w => text.includes(normalize(w)))) {
+      const meta = natureMeta(entry.nature);
+      if (meta.appliesTo.includes(type)) return entry.nature;
+    }
+  }
+  return undefined;
+}
+
+/** Transactions still waiting for the user to confirm their nature. */
+export function pendingClassification(transactions: Transaction[]): Transaction[] {
+  return transactions.filter(tx => tx.type !== 'transfer' && (isUnclassified(tx) || tx.natureConfirmed === false));
+}
